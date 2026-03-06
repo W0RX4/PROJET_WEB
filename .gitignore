@@ -1,0 +1,27 @@
+# Fichiers sensibles
+config/supabase.php
+.env
+
+# Dépendances
+/vendor/
+node_modules/
+
+# Fichiers de log
+storage/logs/*.log
+
+# Fichiers uploadés
+storage/uploads/*
+!storage/uploads/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Composer
+composer.lock
