@@ -1,4 +1,6 @@
 <?php
+    session_start();
+
     require_once __DIR__ . '/../vendor/autoload.php';
 
     use Dotenv\Dotenv;
@@ -27,11 +29,12 @@
     }
 
     if ($user && password_verify($password, $user['password'])) {
-        $_POST['email'] = $email; // Passer l'email à la page d'accueil
-        $_POST['username'] = $user['username'] ?? '';
+        $_SESSION['email'] = $email;
+        $_SESSION['username'] = $user['username'] ?? '';
+        $_SESSION['type'] = $user['type'] ?? '';
         header('Location: ../app/accueil.php');
         exit;
     }
-
-    echo 'Email ou mot de passe incorrect.';
+    $_SESSION['error'] = 'Invalid email or password';
+    header('Location: login.php');
 ?>
