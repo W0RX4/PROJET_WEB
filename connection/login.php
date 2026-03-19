@@ -2,28 +2,48 @@
     session_start();
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Connexion - StageArchive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../public/css/style.css">
 </head>
-<body>
-    <form action="verifConnction.php" method="post">
-        <input type="email" name="email" placeholder="Email" required><br>
-        <input type="password" name="password" placeholder="Password" required><br>
-        <button type="submit">Submit</button><br>
-    </form>
-    <?php
-        if (isset($_SESSION['error'])) {
-            echo "<p style='color: red;'>" . $_SESSION['error'] . "</p>";
-            unset($_SESSION['error']);
-        }
-        if (isset($_SESSION['success'])) {
-            echo "<p style='color: green;'>" . $_SESSION['success'] . "</p>";
-            unset($_SESSION['success']);
-        }
-    ?>
+<body style="background-color: var(--background-color);">
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <h1 class="auth-title">StageArchive</h1>
+            <h2 class="text-center mb-4">Connexion</h2>
+            
+            <?php
+                if (isset($_SESSION['error'])) {
+                    echo "<div class='alert alert-error'>" . $_SESSION['error'] . "</div>";
+                    unset($_SESSION['error']);
+                }
+                if (isset($_SESSION['success'])) {
+                    echo "<div class='alert alert-success'>" . $_SESSION['success'] . "</div>";
+                    unset($_SESSION['success']);
+                }
+            ?>
+
+            <form action="verifConnction.php" method="post">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" placeholder="votre@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mot de passe</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block mt-4">Se connecter</button>
+            </form>
+            <div class="text-center mt-4">
+                <a href="create_user.php" style="color: var(--primary-color); text-decoration: none;">Pas encore de compte ? S'inscrire</a>
+            </div>
+        </div>
+    </div>
 
 </body>
 </html>
