@@ -32,7 +32,15 @@
         $_SESSION['email'] = $email;
         $_SESSION['username'] = $user['username'] ?? '';
         $_SESSION['type'] = $user['type'] ?? '';
-        header('Location: ../app/accueil.php');
+        if ($_SESSION['type'] === 'etudiant') {
+            header('Location: ../app/accueilUser.php');
+        } else {
+            if($_SESSION['type'] === 'entreprise'){
+                header('Location: ../app/accueilEntreprise.php');
+            } else {
+                header('Location: ../app/accueilJury.php');
+            }
+        }
         exit;
     }
     $_SESSION['error'] = 'Invalid email or password';
