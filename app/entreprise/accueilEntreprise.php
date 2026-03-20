@@ -1,7 +1,7 @@
 <?php
-    require_once '../includes/header.php';
+    require_once '../../includes/header.php';
     if($_SESSION['type'] !== 'entreprise'){
-        header('Location: ../connection/login.php');
+        header('Location: ../../connection/login.php');
         exit;
     }
 ?>
@@ -27,6 +27,16 @@
         </div>
 
         <div class="form-group">
+            <label class="form-label" for="type">Filière</label>
+            <select class="form-control" id="type" name="type" required>
+                <option value="">Sélectionnez une filière</option>
+                <option value="informatique">Informatique</option>
+                <option value="mathematiques">Mathématiques</option>
+                <option value="finanace">Finance</option>
+            </select>
+        </div>
+
+        <div class="form-group">
             <label class="form-label" for="description">Description du stage</label>
             <textarea class="form-control" id="description" name="description" required></textarea>
         </div>
@@ -36,7 +46,6 @@
             <input class="form-control" type="text" id="location" name="location" required>
         </div>
 
-        <!-- The backend expects 'company' as an input but it wasn't here, I'll pass the logged company name invisibly or fix it -->
         <input type="hidden" name="company" value="<?php echo htmlspecialchars($username); ?>">
 
         <div class="grid-container">
@@ -54,4 +63,4 @@
     </form>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once '../../includes/footer.php'; ?>

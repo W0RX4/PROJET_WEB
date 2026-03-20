@@ -1,15 +1,15 @@
 <?php
-    require_once '../includes/header.php';
-    require_once __DIR__ . '/../vendor/autoload.php';
+    require_once '../../includes/header.php';
+    require_once __DIR__ . '/../../vendor/autoload.php';
 
     use Dotenv\Dotenv;
     use Supabase\Client\Functions;
 
-    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
 
     if($_SESSION['type'] !== 'etudiant'){
-        header('Location: ../connection/login.php');
+        header('Location: ../../connection/login.php');
         exit;
     }
 ?>
@@ -36,16 +36,16 @@
                         <?php echo htmlspecialchars($stage['title'] ?? 'Titre non disponible'); ?>
                     </h3>
                     <p style="font-weight: 500; color: var(--text-primary); margin-bottom: 1rem;">
-                        🏢 <?php echo htmlspecialchars($stage['company'] ?? 'Entreprise non disponible'); ?>
+                        <?php echo htmlspecialchars($stage['company'] ?? 'Entreprise non disponible'); ?>
                     </p>
                     <p style="font-size: 0.875rem; margin-bottom: 1rem;">
                         <?php echo nl2br(htmlspecialchars($stage['description'] ?? 'Description non disponible')); ?>
                     </p>
                     <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                        <p>📍 <?php echo htmlspecialchars($stage['location'] ?? 'Lieu non disponible'); ?></p>
-                        <p>🗓️ Du <?php echo htmlspecialchars($stage['start_date'] ?? 'N/A'); ?> au <?php echo htmlspecialchars($stage['end_date'] ?? 'N/A'); ?></p>
+                        <p><?php echo htmlspecialchars($stage['location'] ?? 'Lieu non disponible'); ?></p>
+                        <p>Du <?php echo htmlspecialchars($stage['start_date'] ?? 'N/A'); ?> au <?php echo htmlspecialchars($stage['end_date'] ?? 'N/A'); ?></p>
                     </div>
-                    <button class="btn btn-primary btn-block">Postuler</button>
+                    <a href="postuler.php?stage_id=<?php echo urlencode($stage['id'] ?? ''); ?>" class="btn btn-primary mt-4">Postuler</a>
                 </div>
                 <?php
             }
@@ -53,4 +53,4 @@
     ?>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once '../../includes/footer.php'; ?>

@@ -29,17 +29,22 @@
     }
 
     if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['user_id'] = $user['id'] ?? null;
         $_SESSION['email'] = $email;
         $_SESSION['username'] = $user['username'] ?? '';
         $_SESSION['type'] = $user['type'] ?? '';
         if ($_SESSION['type'] === 'etudiant') {
-            header('Location: ../app/accueilUser.php');
+            header('Location: ../app/user/accueilUser.php');
+        } elseif ($_SESSION['type'] === 'entreprise') {
+            header('Location: ../app/entreprise/accueilEntreprise.php');
+        } elseif ($_SESSION['type'] === 'tuteur') {
+            header('Location: ../app/tuteur/accueilTuteur.php');
+        } elseif ($_SESSION['type'] === 'jury') {
+            header('Location: ../app/jury/accueilJury.php');
+        } elseif ($_SESSION['type'] === 'admin') {
+            header('Location: ../app/admin/accueilAdmin.php');
         } else {
-            if($_SESSION['type'] === 'entreprise'){
-                header('Location: ../app/accueilEntreprise.php');
-            } else {
-                header('Location: ../app/accueilJury.php');
-            }
+            header('Location: login.php');
         }
         exit;
     }

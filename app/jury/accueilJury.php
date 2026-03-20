@@ -1,7 +1,7 @@
 <?php
-    require_once '../includes/header.php';
+    require_once '../../includes/header.php';
     if($_SESSION['type'] !== 'jury'){
-        header('Location: ../connection/login.php');
+        header('Location: ../../connection/login.php');
         exit;
     }
 ?>
@@ -16,4 +16,4 @@
     <p>Liste des soutenances à venir...</p>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once '../../includes/footer.php'; ?>

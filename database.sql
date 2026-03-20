@@ -25,6 +25,17 @@ CREATE TABLE stages (
     FOREIGN KEY (tutor_id) REFERENCES users(id)
 );
 
+
+CREATE TABLE candidatures (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL,
+    stage_id INTEGER NOT NULL,
+    status VARCHAR(50) DEFAULT 'en attente',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (stage_id) REFERENCES stages(id)
+);
+
 ALTER TABLE users
 ADD CONSTRAINT fk_users_stage
 FOREIGN KEY (stage_id) REFERENCES stages(id);

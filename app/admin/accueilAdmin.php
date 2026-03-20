@@ -1,7 +1,7 @@
 <?php
-    require_once '../includes/header.php';
+    require_once '../../includes/header.php';
     if($_SESSION['type'] !== 'admin'){
-        header('Location: ../connection/login.php');
+        header('Location: ../../connection/login.php');
         exit;
     }
 ?>
@@ -29,4 +29,4 @@
     </div>
 </div>
 
-<?php require_once '../includes/footer.php'; ?>
+<?php require_once '../../includes/footer.php'; ?>

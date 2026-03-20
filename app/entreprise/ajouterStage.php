@@ -6,12 +6,12 @@
         exit;
     }
 
-    require_once __DIR__ . '/../vendor/autoload.php';
+    require_once __DIR__ . '/../../vendor/autoload.php';
 
     use Dotenv\Dotenv;
     use Supabase\Client\Functions;
 
-    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
 
     $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
@@ -23,6 +23,7 @@
         'location' => $_POST['location'] ?? '',
         'start_date' => $_POST['startDate'] ?? '',
         'end_date' => $_POST['endDate'] ?? '',
+        'filiere' => $_POST['filiere'] ?? '',
     ];
 
     $insertResult = $client->postData('stages', $newStage);
