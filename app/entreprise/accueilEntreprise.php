@@ -1,7 +1,7 @@
 <?php
-    require_once '../../includes/header.php';
-    if($_SESSION['type'] !== 'entreprise'){
-        header('Location: ../../connection/login.php');
+    require_once __DIR__ . '/../../includes/header.php';
+    if(!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise'){
+        header('Location: /login');
         exit;
     }
 ?>

@@ -1,15 +1,18 @@
 <?php
-    require_once '../../includes/header.php';
+    require_once __DIR__ . '/../../includes/header.php';
     require_once __DIR__ . '/../../vendor/autoload.php';
 
     use Dotenv\Dotenv;
     use Supabase\Client\Functions;
 
-    $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
-    $dotenv->safeLoad();
+    // Load env only if not already loaded (useful since we already loaded it in index.php)
+    if (!isset($_ENV['SUPABASE_URL'])) {
+        $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
+        $dotenv->safeLoad();
+    }
 
-    if($_SESSION['type'] !== 'etudiant'){
-        header('Location: ../../connection/login.php');
+    if(!isset($_SESSION['type']) || $_SESSION['type'] !== 'etudiant'){
+        header('Location: /login');
         exit;
     }
 ?>

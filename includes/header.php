@@ -3,16 +3,17 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 $userType = $_SESSION['type'] ?? '';
 $username = $_SESSION['username'] ?? '';
 
 // Determine home link based on type
 $homeLink = '#';
-if ($userType === 'etudiant') $homeLink = '../user/accueilUser.php';
-elseif ($userType === 'entreprise') $homeLink = '../entreprise/accueilEntreprise.php';
-elseif ($userType === 'tuteur') $homeLink = '../tuteur/accueilTuteur.php';
-elseif ($userType === 'jury') $homeLink = '../jury/accueilJury.php';
-elseif ($userType === 'admin') $homeLink = '../admin/accueilAdmin.php';
+if ($userType === 'etudiant') $homeLink = '/app/user/accueilUser.php';
+elseif ($userType === 'entreprise') $homeLink = '/app/entreprise/accueilEntreprise.php';
+elseif ($userType === 'tuteur') $homeLink = '/app/tuteur/accueilTuteur.php';
+elseif ($userType === 'jury') $homeLink = '/app/jury/accueilJury.php';
+elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
 
 ?>
 <!DOCTYPE html>

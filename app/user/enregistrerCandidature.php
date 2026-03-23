@@ -1,5 +1,5 @@
 <?php
-session_start();
+ ;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../../connection/login.php');
@@ -37,7 +37,7 @@ function uploadToSupabaseStorage($file, $userEmail, $type, $supabaseUrl, $supaba
     $headers = [
         "apikey: " . $supabaseKey,
         "Authorization: Bearer " . $supabaseKey,
-        "Content-Type: " . mime_content_type($file['tmp_name']) // Typiquement application/pdf
+        "Content-Type: " . mime_content_type($file['tmp_name'])
     ];
 
     curl_setopt($ch, CURLOPT_URL, $url);

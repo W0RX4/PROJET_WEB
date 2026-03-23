@@ -1,5 +1,7 @@
 <?php
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -28,7 +30,7 @@
                 }
             ?>
 
-            <form action="verifConnction.php" method="post">
+            <form action="/login" method="post">
                 <div class="form-group">
                     <label class="form-label">Email</label>
                     <input type="email" name="email" class="form-control" placeholder="votre@email.com" required>
@@ -40,7 +42,7 @@
                 <button type="submit" class="btn btn-primary btn-block mt-4">Se connecter</button>
             </form>
             <div class="text-center mt-4">
-                <a href="create_user.php" style="color: var(--primary-color); text-decoration: none;">Pas encore de compte ? S'inscrire</a>
+                <a href="/register" style="color: var(--primary-color); text-decoration: none;">Pas encore de compte ? S'inscrire</a>
             </div>
         </div>
     </div>

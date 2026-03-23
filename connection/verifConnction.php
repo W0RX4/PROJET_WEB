@@ -1,6 +1,4 @@
 <?php
-    session_start();
-
     require_once __DIR__ . '/../vendor/autoload.php';
 
     use Dotenv\Dotenv;
@@ -10,7 +8,7 @@
     $dotenv->safeLoad();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        header('Location: login.php');
+        header('Location: /login');
         exit;
     }
 
@@ -33,21 +31,24 @@
         $_SESSION['email'] = $email;
         $_SESSION['username'] = $user['username'] ?? '';
         $_SESSION['type'] = $user['type'] ?? '';
+        session_write_close();
         if ($_SESSION['type'] === 'etudiant') {
-            header('Location: ../app/user/accueilUser.php');
+            header('Location: /app/user/accueilUser.php');
         } elseif ($_SESSION['type'] === 'entreprise') {
-            header('Location: ../app/entreprise/accueilEntreprise.php');
+            header('Location: /app/entreprise/accueilEntreprise.php');
         } elseif ($_SESSION['type'] === 'tuteur') {
-            header('Location: ../app/tuteur/accueilTuteur.php');
+            header('Location: /app/tuteur/accueilTuteur.php');
         } elseif ($_SESSION['type'] === 'jury') {
-            header('Location: ../app/jury/accueilJury.php');
+            header('Location: /app/jury/accueilJury.php');
         } elseif ($_SESSION['type'] === 'admin') {
-            header('Location: ../app/admin/accueilAdmin.php');
+            header('Location: /app/admin/accueilAdmin.php');
         } else {
-            header('Location: login.php');
+            header('Location: /login');
         }
         exit;
     }
     $_SESSION['error'] = 'Invalid email or password';
-    header('Location: login.php');
+    session_write_close();
+    header('Location: /login');
+    exit;
 ?>
