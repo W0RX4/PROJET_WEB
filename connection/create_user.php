@@ -39,7 +39,7 @@
                 <button type="submit" class="btn btn-primary btn-block mt-4">Créer mon compte</button>
             </form>
             <div class="text-center mt-4">
-                <a href="login.php" style="color: var(--primary-color); text-decoration: none;">Déjà un compte ? Se connecter</a>
+                <a href="connection/login.php" style="color: var(--primary-color); text-decoration: none;">Déjà un compte ? Se connecter</a>
             </div>
         </div>
     </div>

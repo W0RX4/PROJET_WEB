@@ -37,13 +37,7 @@ Répartition par membre (4 personnes)
 Légende : 🅰️ Membre A — 🅱️ Membre B — 🅲️ Membre C — 🅳️ Membre D
 
 🅰️ Membre A — Backend & Base de données
-Rôle : Évolution du schéma BDD, logique métier PHP, API Supabase
 
-Sprint 1 (Semaine 1) — Fondations BDD
- Étendre le schéma PostgreSQL (voir section Évolution BDD ci-dessous)
- Créer les tables : documents, remarques, formations, conventions, traces
- Ajouter les colonnes manquantes à stages (compétences, filière, durée, statut)
- Créer les fonctions PHP utilitaires : 
 db.php
  (CRUD générique via Supabase API)
 Sprint 2 (Semaine 2) — Documents & Auth 2FA

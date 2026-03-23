@@ -27,8 +27,8 @@
         </div>
 
         <div class="form-group">
-            <label class="form-label" for="type">Filière</label>
-            <select class="form-control" id="type" name="type" required>
+            <label class="form-label" for="filiere">Filière</label>
+            <select class="form-control" id="filiere" name="filiere" required>
                 <option value="">Sélectionnez une filière</option>
                 <option value="informatique">Informatique</option>
                 <option value="mathematiques">Mathématiques</option>
