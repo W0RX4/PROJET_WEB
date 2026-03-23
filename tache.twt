@@ -1,0 +1,272 @@
+Plan de Répartition des Tâches — CyTech Internship Hub
+Audit de l'existant
+✅ Ce qui EST fait
+Composant	Détails
+Framework	Slim PHP 4 + PhpRenderer
+BDD	Supabase (PostgreSQL) — 3 tables : users, stages, candidatures
+Auth	Login / Register fonctionnels (5 types : admin, etudiant, entreprise, tuteur, jury)
+Routing	
+index.php
+ avec routes GET/POST pour login, register, logout + pages protégées
+Étudiant	Dashboard, consultation offres, candidature, suivi candidatures
+Entreprise	Dashboard, ajout de stage, liste offres, gestion candidatures
+Admin	Page d'accueil skeleton (boutons non fonctionnels)
+Tuteur	Page d'accueil skeleton (aucune fonctionnalité)
+Jury	Page d'accueil skeleton (aucune fonctionnalité)
+CSS	311 lignes, design system avec tokens (Inter font, cards, forms, buttons, alerts)
+Header/Footer	Navigation dynamique par type d'utilisateur
+❌ Ce qui MANQUE (par priorité)
+Priorité	Fonctionnalité manquante
+🔴 Critique	Espace Admin fonctionnel (gestion comptes, offres, formations)
+🔴 Critique	Espace Tuteur fonctionnel (validation convention, suivi étudiants, dépôt rapport)
+🔴 Critique	Espace Jury fonctionnel (consultation dossiers, validation stages, remarques)
+🔴 Critique	Upload/gestion de documents (rapports, conventions, fiches évaluation)
+🟠 Important	Base de données incomplète (tables documents, remarques, formations, conventions, traces)
+🟠 Important	Authentification 2FA (2e niveau d'auth exigé par le cahier des charges)
+🟠 Important	Recherche/filtrage des stages (par filière, durée, compétences)
+🟠 Important	Cahier de stage étudiant
+🟠 Important	Système de remarques (toutes les parties)
+🟡 Moyen	Système de trace/logs (fichier de suivi des requêtes)
+🟡 Moyen	Notifications admin (flux périodiques)
+🟡 Moyen	Design responsive (Mobile-First, media queries)
+🟡 Moyen	Accessibilité WCAG (balises sémantiques, alt text, contrastes)
+🟢 Bonus	Tests multi-navigateurs et performance
+🟢 Bonus	Hébergement en ligne
+🟢 Bonus	Rapport et documentation finale
+Répartition par membre (4 personnes)
+Légende : 🅰️ Membre A — 🅱️ Membre B — 🅲️ Membre C — 🅳️ Membre D
+
+🅰️ Membre A — Backend & Base de données
+Rôle : Évolution du schéma BDD, logique métier PHP, API Supabase
+
+Sprint 1 (Semaine 1) — Fondations BDD
+ Étendre le schéma PostgreSQL (voir section Évolution BDD ci-dessous)
+ Créer les tables : documents, remarques, formations, conventions, traces
+ Ajouter les colonnes manquantes à stages (compétences, filière, durée, statut)
+ Créer les fonctions PHP utilitaires : 
+db.php
+ (CRUD générique via Supabase API)
+Sprint 2 (Semaine 2) — Documents & Auth 2FA
+ Implémenter l'upload de fichiers (rapports, conventions, fiches) vers Supabase Storage
+ Créer le système de téléchargement sécurisé des documents
+ Implémenter l'authentification 2FA (code par email ou TOTP)
+ Ajouter la table two_factor_codes et la logique de vérification
+Sprint 3 (Semaine 3) — Recherche & Traces
+ Implémenter le moteur de recherche de stages (filtres filière, durée, compétences)
+ Créer le système de trace/logs (fichier storage/logs/trace.log)
+ Implémenter les notifications périodiques pour l'admin
+ Mettre en place le système de requêtes étudiants → admin (ajout de formation)
+Sprint 4 (Semaine 4) — Polissage & Tests
+ Sécuriser toutes les routes (middleware de vérification de session)
+ Préparer les fixtures/seed pour la démo (données réalistes)
+ Corriger les bugs et optimiser les requêtes
+ Contribuer au rapport (section technique, BDD, architecture)
+🅱️ Membre B — Frontend, UX/UI & Responsive
+Rôle : CSS avancé, responsive design, accessibilité, pages UI
+
+Sprint 1 (Semaine 1) — Design System & Responsive
+ Ajouter les media queries pour le responsive (mobile, tablette, desktop)
+ Implémenter un menu hamburger pour mobile
+ Ajouter les balises sémantiques HTML5 (<header>, <main>, <article>, <section>, <footer>)
+ Ajouter les attributs alt à toutes les images, aria-label aux boutons
+ Vérifier les contrastes de couleurs (WCAG AA minimum)
+Sprint 2 (Semaine 2) — Pages formulaires & recherche
+ Créer la page de recherche de stages (formulaire + résultats avec grille)
+ Créer le formulaire d'upload de documents (drag & drop si possible)
+ Améliorer les formulaires existants (validation JS côté client)
+ Créer le composant "status badge" (en attente, validé, refusé)
+Sprint 3 (Semaine 3) — Tableaux & Dashboards
+ Créer les composants tableau (pour admin : liste users, offres)
+ Implémenter le tableau de bord admin (statistiques, compteurs)
+ Créer la page "Cahier de stage" (timeline/journal étudiant)
+ Ajouter les micro-animations CSS (transitions, hover effects)
+Sprint 4 (Semaine 4) — Polissage & Accessibilité
+ Tests cross-browser (Chrome, Firefox, Safari)
+ Tests responsive sur différents écrans
+ Lazy loading des images
+ Optimiser les fichiers CSS/JS (minification)
+ Contribuer au rapport (section UX, responsive, accessibilité)
+🅲️ Membre C — Espaces Tuteur, Jury & Admin
+Rôle : Pages fonctionnelles PHP pour les 3 rôles non implémentés
+
+Sprint 1 (Semaine 1) — Espace Admin
+ Page gestion des comptes (gestionComptes.php) : lister, modifier, supprimer des users
+ Page gestion des offres (gestionOffres.php) : valider/refuser les offres d'entreprises
+ Page gestion des formations (gestionFormations.php) : CRUD filières/formations
+ Ajouter les routes correspondantes dans 
+index.php
+Sprint 2 (Semaine 2) — Espace Tuteur
+ Page suivi des étudiants (suiviEtudiants.php) : liste étudiants assignés + état du stage
+ Page validation convention (validerConvention.php) : formulaire de validation
+ Page consultation documents (documentsEtudiant.php) : téléchargement rapports
+ Page consultation offres (offresStages.php) et affectation de stage
+ Formulaire de remarques sur le stage
+Sprint 3 (Semaine 3) — Espace Jury
+ Page consultation des dossiers (dossiers.php) : liste des étudiants avec documents
+ Page cahier de stage (cahierStage.php) : vue lecture seule du journal
+ Page tâches affectées (tachesProf.php) : consulter les tâches assignées par les profs
+ Bouton de validation de stage + formulaire de remarques
+ Compléter le dashboard étudiant : cahier de stage, upload docs, remarques
+Sprint 4 (Semaine 4) — Entreprise compléments & Polissage
+ Ajouter la validation de convention en ligne côté entreprise
+ Ajouter l'attribution de missions aux étudiants
+ Ajouter les remarques entreprise sur le stage
+ Contribuer au rapport (section fonctionnalités par rôle)
+🅳️ Membre D — DevOps, Qualité, Documentation & Gestion de projet
+Rôle : Git, tests, rapport, soutenance, Gantt, SCRUM
+
+Sprint 1 (Semaine 1) — Organisation & Infra
+ Structurer le dépôt Git (branches par fonctionnalité, 
+.gitignore
+ propre)
+ Créer le diagramme de Gantt (avec Notion, Trello, ou GanttProject)
+ Rédiger le backlog SCRUM (user stories par sprint)
+ Mettre en place la structure de dossiers propre (src/, config/, storage/, docs/)
+Sprint 2 (Semaine 2) — Documentation & Tests
+ Mettre à jour le README avec les vraies instructions
+ Commencer la rédaction du rapport (intro, contexte, choix techno)
+ Écrire les tests manuels pour chaque fonctionnalité
+ Configurer le .htaccess ou le serveur PHP pour la prod
+Sprint 3 (Semaine 3) — Rapport & Optimisation
+ Compléter le rapport : méthodologie SCRUM, répartition des tâches, étapes réalisées
+ Ajouter les captures d'écran dans le rapport
+ Tester la performance (PageSpeed Insights ou Lighthouse)
+ Préparer les données de démo pour la soutenance
+Sprint 4 (Semaine 4) — Soutenance & Livraison
+ Finaliser le rapport (conclusion, perspectives)
+ Préparer le support de soutenance (slides, scénario démo)
+ Répéter la soutenance (20 min max)
+ Vérifier que tous les commits sont propres et documentés
+ Hébergement optionnel (Vercel / Netlify / local)
+Évolution de la Base de Données
+sql
+-- Nouvelles tables à ajouter
+CREATE TABLE formations (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    department VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE documents (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    stage_id INTEGER REFERENCES stages(id),
+    type VARCHAR(100) NOT NULL, -- 'rapport', 'convention', 'fiche_evaluation', 'resume'
+    file_path TEXT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE remarques (
+    id SERIAL PRIMARY KEY,
+    stage_id INTEGER NOT NULL REFERENCES stages(id),
+    author_id INTEGER NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE conventions (
+    id SERIAL PRIMARY KEY,
+    stage_id INTEGER NOT NULL REFERENCES stages(id),
+    student_id INTEGER NOT NULL REFERENCES users(id),
+    company_validated BOOLEAN DEFAULT FALSE,
+    tutor_validated BOOLEAN DEFAULT FALSE,
+    admin_validated BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE traces (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    action VARCHAR(255) NOT NULL,
+    details TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE cahier_stage (
+    id SERIAL PRIMARY KEY,
+    stage_id INTEGER NOT NULL REFERENCES stages(id),
+    student_id INTEGER NOT NULL REFERENCES users(id),
+    entry_date DATE NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE two_factor_codes (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    code VARCHAR(6) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE
+);
+CREATE TABLE missions (
+    id SERIAL PRIMARY KEY,
+    stage_id INTEGER NOT NULL REFERENCES stages(id),
+    company_id INTEGER NOT NULL REFERENCES users(id),
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE formation_requests (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES users(id),
+    formation_name VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'en attente', -- 'en attente', 'approuvé', 'refusé'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- Ajouts à la table stages existante
+ALTER TABLE stages ADD COLUMN IF NOT EXISTS competences TEXT;
+ALTER TABLE stages ADD COLUMN IF NOT EXISTS filiere VARCHAR(255);
+ALTER TABLE stages ADD COLUMN IF NOT EXISTS duration_weeks INTEGER;
+ALTER TABLE stages ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'ouverte';
+ALTER TABLE stages ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES users(id);
+Timeline / Gantt simplifié
+25/03
+27/03
+29/03
+31/03
+01/04
+03/04
+05/04
+07/04
+09/04
+11/04
+13/04
+Schéma BDD étendu
+Responsive & Accessibilité
+Espace Admin
+Git & SCRUM & Gantt
+Upload docs & 2FA
+Pages recherche & upload
+Espace Tuteur
+README & Tests manuels
+Recherche & Traces
+Tableaux & Dashboards
+Espace Jury
+Rapport & Performance
+Sécurité & Seed
+Cross-browser & Opti
+Entreprise compléments
+Soutenance & Livraison
+🅰️ Backend/BDD
+🅱️ Frontend/UX
+🅲️ Tuteur/Jury/Admin
+🅳️ DevOps/Docs
+Planning Projet CyTech Internship Hub
+Dépendances entre membres
+Tâche	Dépend de
+🅲️ Pages admin/tuteur/jury	🅰️ Tables BDD créées d'abord
+🅱️ Page recherche stages	🅰️ Colonnes filière/compétences ajoutées
+🅱️ Formulaire upload docs	🅰️ Système d'upload implémenté
+🅲️ Cahier de stage	🅰️ Table cahier_stage créée
+🅳️ Tests fonctionnels	🅲️ Pages terminées
+🅳️ Captures pour rapport	🅱️ CSS responsive fini
+⚠️ Sprint 1 est crucial : le Membre A doit finaliser le schéma BDD en premier pour débloquer les Membres B et C.
+
+Verification Plan
+Tests manuels (par fonctionnalité)
+Login/Register — Tester les 5 types d'utilisateurs, vérifier les redirections
+Espace Étudiant — Consulter offres, postuler, voir candidatures, cahier de stage
+Espace Entreprise — Créer offre, voir candidatures reçues, valider convention
+Espace Tuteur — Voir étudiants assignés, valider convention, télécharger docs
+Espace Jury — Consulter dossiers, valider stages, ajouter remarques
+Espace Admin — Gérer comptes, offres, formations
+Recherche — Filtrer par filière, durée, compétences
+2FA — Vérifier le 2ème facteur après login
+Responsive — Tester sur mobile (320px), tablette (768px), desktop (1200px+)
+Accessibilité — Vérifier avec Lighthouse > 90 en accessibilité
