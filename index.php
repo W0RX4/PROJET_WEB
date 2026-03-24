@@ -7,6 +7,7 @@
     use Psr\Http\Message\ServerRequestInterface as Request;
 
     require __DIR__ . '/vendor/autoload.php';
+    require __DIR__ . '/middleware.php';
 
     // 1. Initialisation de l'application Slim
     $app = AppFactory::create();
@@ -52,20 +53,20 @@
     // Route pour l'admin
     $app->get('/app/admin/accueilAdmin.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/admin/accueilAdmin.php', $args);
-    });
+    })->add($authMiddleware);
 
     // Routes pour l'entreprise
     $app->get('/app/entreprise/accueilEntreprise.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/entreprise/accueilEntreprise.php', $args);
-    });
+    })->add($authMiddleware);
     $app->get('/app/entreprise/ajouterStage.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/entreprise/ajouterStage.php', $args);
-    });
+    })->add($authMiddleware);
 
     // Routes pour l'utilisateur (étudiant)
     $app->get('/app/user/accueilUser.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/user/accueilUser.php', $args);
-    });
+    })->add($authMiddleware);
 
     // 3. Exécution de l'application
     $app->run();
