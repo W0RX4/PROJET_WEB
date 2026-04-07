@@ -29,7 +29,6 @@
         }
     }
 
-    // Fetch all users to map student details
     $allUsers = $client->getAllData('users') ?: [];
     $usersMap = [];
     foreach ($allUsers as $u) {
