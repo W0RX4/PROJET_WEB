@@ -15,7 +15,8 @@
     <div class="card">
         <h3>Gestion des Comptes</h3>
         <p>Gérez les accès des étudiants, tuteurs, entreprises et jurys.</p>
-        <button class="btn btn-primary mt-4">Gérer les comptes</button>
+        <a href="/app/admin/gestionComptes.php" class="btn btn-primary mt-4">Gérer les comptes</a>
+
     </div>
     <div class="card">
         <h3>Offres de Stage</h3>

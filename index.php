@@ -1,6 +1,8 @@
 <?php
     session_start();
-
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
     use Slim\Factory\AppFactory;
     use Slim\Views\PhpRenderer;
     use Psr\Http\Message\ResponseInterface as Response;
@@ -66,6 +68,14 @@
     // Routes pour l'utilisateur (étudiant)
     $app->get('/app/user/accueilUser.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/user/accueilUser.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
+    return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
+    return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
     })->add($authMiddleware);
 
     // 3. Exécution de l'application
