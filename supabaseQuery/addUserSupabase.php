@@ -23,7 +23,7 @@ function addUserSupabase($email, $username, $password, $type) {
         'type' => $type,
     ];
 
-    return $client->postData('user', $user);
+    return $client->postData('users', $user);
 }
 
 // Exemple d'appel :

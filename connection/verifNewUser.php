@@ -13,9 +13,10 @@
 
 
     $result = addUserSupabase($_POST['email'], $_POST['username'], $_POST['password'], $_POST['type']);
+    $resultData = is_string($result) && $result !== '' ? json_decode($result, true) : null;
 
-    if (is_string($result) && str_contains($result, '"code"')) {
-        $_SESSION['error'] = 'Erreur lors de la création du compte.';
+    if (is_array($resultData) && isset($resultData['code'])) {
+        $_SESSION['error'] = 'Erreur lors de la création du compte : ' . ($resultData['message'] ?? 'inconnue');
         header('Location: /register');
         exit;
     }

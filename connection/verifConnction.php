@@ -50,7 +50,5 @@
     $_SESSION['error'] = 'Invalid email or password';
     session_write_close();
     header('Location: /login');
-    $users = json_decode($response, true);
-    var_dump($users); // ← ajoute ça temporairement
     exit;
 ?>
