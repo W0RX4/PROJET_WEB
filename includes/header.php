@@ -33,8 +33,14 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
     <?php if ($userType): ?>
     <header class="navbar">
         <a href="<?php echo $homeLink; ?>" class="navbar-brand">StageArchive</a>
-        
-        <nav>
+
+        <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+
+        <nav class="nav-menu" id="nav-menu">
             <ul class="navbar-nav">
                 <li><a href="<?php echo $homeLink; ?>" class="nav-link">Accueil</a></li>
                 
@@ -60,5 +66,25 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
         </nav>
     </header>
     <?php endif; ?>
+
+    <script>
+        const hamburger = document.getElementById('hamburger');
+        const navMenu = document.getElementById('nav-menu');
+        if (hamburger && navMenu) {
+            hamburger.addEventListener('click', function () {
+                const isOpen = navMenu.classList.toggle('open');
+                hamburger.classList.toggle('open');
+                hamburger.setAttribute('aria-expanded', isOpen);
+            });
+            // Close menu when clicking a link
+            navMenu.querySelectorAll('.nav-link, .btn-logout').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    navMenu.classList.remove('open');
+                    hamburger.classList.remove('open');
+                    hamburger.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+    </script>
 
     <main class="main-content">
