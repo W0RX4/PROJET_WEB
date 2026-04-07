@@ -17,7 +17,7 @@ $baseUrl = rtrim($_ENV['SUPABASE_URL'], '/') . '/rest/v1';
 $successMsg = '';
 $errorMsg   = '';
  
-// ── SUPPRESSION ──
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = $_POST['action'];
     $userId = (int) ($_POST['user_id'] ?? 0);

@@ -70,6 +70,7 @@
         return $renderer->render($response, '/app/user/accueilUser.php', $args);
     })->add($authMiddleware);
 
+    //Routes pour l'admin (gestion des comptes)
     $app->get('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
     return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
     })->add($authMiddleware);
@@ -78,6 +79,15 @@
     return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
     })->add($authMiddleware);
 
+    // Routes pour l'admin (gestion des offres)
+    $app->get('/app/admin/gestionOffres.php', function (Request $request, Response $response, $args) use ($renderer) {
+    return $renderer->render($response, '/app/admin/gestionOffres.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/admin/gestionOffres.php', function (Request $request, Response $response, $args) use ($renderer) {
+    return $renderer->render($response, '/app/admin/gestionOffres.php', $args);
+
+})->add($authMiddleware);
     // 3. Exécution de l'application
     $app->run();
 ?>

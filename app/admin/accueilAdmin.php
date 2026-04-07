@@ -21,7 +21,7 @@
     <div class="card">
         <h3>Offres de Stage</h3>
         <p>Consultez et validez les offres déposées par les entreprises.</p>
-        <button class="btn btn-primary mt-4">Gérer les offres</button>
+        <a href="/app/admin/gestionOffres.php" class="btn btn-primary mt-4">Gérer les offres</a>
     </div>
     <div class="card">
         <h3>Configurations</h3>
