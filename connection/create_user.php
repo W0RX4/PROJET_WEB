@@ -13,7 +13,7 @@
             <h1 class="auth-title">StageArchive</h1>
             <h2 class="text-center mb-4">Créer un compte</h2>
             
-            <form method="post" action="verifNewUser.php">
+            <form method="post" action="/register">
                 <div class="form-group">
                     <label class="form-label">Nom d'utilisateur</label>
                     <input type="text" name="username" class="form-control" placeholder="Entrez votre nom" required>
