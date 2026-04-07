@@ -1,12 +1,15 @@
 <?php
     require_once '../../includes/header.php';
     require_once __DIR__ . '/../../vendor/autoload.php';
+    require_once __DIR__ . '/../../supabaseQuery/getSupabaseSignedUrl.php';
 
     use Dotenv\Dotenv;
     use Supabase\Client\Functions;
 
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
+
+    session_start();
 
     if($_SESSION['type'] !== 'etudiant'){
         header('Location: ../../connection/login.php');
@@ -33,6 +36,7 @@
     foreach ($allStages as $s) {
         $stagesMap[$s['id']] = $s;
     }
+
 ?>
 
 <div class="card mes-offres-hero">
@@ -50,9 +54,13 @@
                 $stage = $stageId ? ($stagesMap[$stageId] ?? null) : null;
                 $stageTitle = $stage ? $stage['title'] : 'Stage inconnu';
                 $stageCompany = $stage ? $stage['company'] : 'Entreprise inconnue';
+
+                $cheminEnBase = rtrim($_ENV['SUPABASE_URL'], '/') . '/storage/files/buckets/candidatures';
+                $lienTemporaireCv = getSupabaseSignedUrl($candidature['cv_url'], $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) ?? null;
+                $lienTemporaireLm = !empty($candidature['cover_letter_url']) ? getSupabaseSignedUrl($candidature['cover_letter_url'], $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) : null;
                 
-                $cvUrl = !empty($candidature['cv_url']) ? rtrim($_ENV['SUPABASE_URL'], '/') . '/storage/v1/object/public/candidatures/' . $candidature['cv_url'] : null;
-                $lmUrl = !empty($candidature['cover_letter_url']) ? rtrim($_ENV['SUPABASE_URL'], '/') . '/storage/v1/object/public/candidatures/' . $candidature['cover_letter_url'] : null;
+                $cvUrl = $lienTemporaireCv;
+                $lmUrl = $lienTemporaireLm;
             ?>
             <div class="card">
                 <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">

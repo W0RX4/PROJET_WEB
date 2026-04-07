@@ -1,5 +1,5 @@
 <?php
- ;
+session_start();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../../connection/login.php');
@@ -27,7 +27,9 @@ function uploadToSupabaseStorage($file, $userEmail, $type, $supabaseUrl, $supaba
     $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
     $fileName = $type . "_" . time() . "_" . uniqid() . "." . $extension;
     // On crée un sous-dossier par utilisateur : userEmail/nomFichier
-    $filePath = urlencode($userEmail) . "/" . $fileName;
+    // On nettoie l'email pour l'utiliser comme nom de dossier (pas d'urlencode qui casse le path)
+    $safeEmail = str_replace(['@', '.', '+'], ['_at_', '_', '_'], $userEmail);
+    $filePath = $safeEmail . "/" . $fileName;
 
     $fileData = file_get_contents($file['tmp_name']);
     $url = $supabaseUrl . '/storage/v1/object/' . $bucket . '/' . ltrim($filePath, '/');
