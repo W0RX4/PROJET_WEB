@@ -308,3 +308,156 @@ select.form-control {
   display: flex;
   justify-content: flex-start;
 }
+
+/* ========== Hamburger Button ========== */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
+}
+
+.hamburger-line {
+  display: block;
+  width: 24px;
+  height: 2.5px;
+  background-color: var(--text-primary);
+  border-radius: 2px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hamburger.open .hamburger-line:nth-child(1) {
+  transform: translateY(7.5px) rotate(45deg);
+}
+
+.hamburger.open .hamburger-line:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open .hamburger-line:nth-child(3) {
+  transform: translateY(-7.5px) rotate(-45deg);
+}
+
+/* ========== Responsive ========== */
+
+/* Tablet */
+@media (max-width: 992px) {
+  .navbar {
+    padding: 0.75rem 1.25rem;
+  }
+
+  .navbar-nav {
+    gap: 1rem;
+  }
+
+  .main-content {
+    padding: 1.5rem;
+  }
+
+  .grid-container {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .nav-menu {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 75%;
+    max-width: 300px;
+    height: 100vh;
+    background-color: var(--surface-color);
+    box-shadow: -4px 0 12px rgb(0 0 0 / 0.15);
+    padding: 5rem 1.5rem 2rem;
+    transition: right 0.3s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .nav-menu.open {
+    right: 0;
+  }
+
+  .navbar-nav {
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+  }
+
+  .navbar-nav li {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .navbar-nav li:last-child {
+    border-bottom: none;
+  }
+
+  .nav-link,
+  .navbar-nav li span,
+  .btn-logout {
+    display: block;
+    padding: 0.85rem 0;
+    margin: 0 !important;
+  }
+
+  .btn-logout {
+    text-align: center;
+    margin-top: 0.5rem !important;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
+
+  .grid-container {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
+
+  .auth-wrapper {
+    padding: 1rem;
+  }
+
+  .auth-card {
+    padding: 1.5rem;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.6rem 1rem;
+  }
+
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+
+  .btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .form-control {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
