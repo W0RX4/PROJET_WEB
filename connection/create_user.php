@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Création d'un compte - StageArchive</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Inscription - StageArchive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../public/css/style.css">
 </head>
-<body style="background-color: var(--background-color);">
+<body>
+
     <div class="auth-wrapper">
         <div class="auth-card">
             <h1 class="auth-title">StageArchive</h1>
-            <h2 class="text-center mb-4">Créer un compte</h2>
-            
+            <h2 class="text-center mb-4" style="color: var(--text-secondary); font-weight: 500; font-size: 1rem;">Creez votre compte</h2>
+
             <form method="post" action="/register">
                 <div class="form-group">
                     <label class="form-label">Nom d'utilisateur</label>
@@ -29,19 +30,20 @@
                 <div class="form-group">
                     <label class="form-label">Je suis un(e)</label>
                     <select name="type" class="form-control">
-                        <option value="etudiant">Étudiant</option>
+                        <option value="etudiant">Etudiant</option>
                         <option value="tuteur">Tuteur</option>
                         <option value="entreprise">Entreprise</option>
                         <option value="jury">Jury</option>
                         <option value="admin">Administrateur</option>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block mt-4">Créer mon compte</button>
+                <button type="submit" class="btn btn-primary btn-block mt-4">Creer mon compte</button>
             </form>
             <div class="text-center mt-4">
-                <a href="/login" style="color: var(--primary-color); text-decoration: none;">Déjà un compte ? Se connecter</a>
+                <a href="/login" style="color: var(--accent-color); text-decoration: none; font-weight: 500; font-size: 0.9rem;">Deja un compte ? Se connecter</a>
             </div>
         </div>
     </div>
+
 </body>
 </html>
