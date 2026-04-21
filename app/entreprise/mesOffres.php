@@ -7,22 +7,43 @@
     }
 
     require_once __DIR__ . '/../../vendor/autoload.php';
+    require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 
     use Dotenv\Dotenv;
-    use Supabase\Client\Functions;
 
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
 
-    $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
+    $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
+    $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
+    $companyId = (int) ($_SESSION['user_id'] ?? 0);
+    $companyName = (string) ($_SESSION['username'] ?? '');
 
-    $mesStages = $client->getAllData('stages', ['company' => $_SESSION['username'] ?? '']);
+    $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=*&order=created_at.desc", $apiKey);
+    $mesStages = [];
+
+    if (is_array($stagesResult['data'])) {
+        foreach ($stagesResult['data'] as $stage) {
+            $matchesCompanyId = $companyId > 0 && (int) ($stage['company_id'] ?? 0) === $companyId;
+            $matchesCompanyName = isset($stage['company']) && (string) $stage['company'] === $companyName;
+
+            if ($matchesCompanyId || $matchesCompanyName) {
+                $mesStages[] = $stage;
+            }
+        }
+    }
 ?>
 
 <div class="card mes-offres-hero">
     <h2>Mes offres de stage disponibles</h2>
     <p>Retrouvez ici toutes les offres publiées par votre entreprise.</p>
 </div>
+
+<?php if (!$stagesResult['ok']): ?>
+    <div class="alert alert-error">
+        <?php echo htmlspecialchars(supabaseRestErrorMessage($stagesResult, 'Impossible de charger vos offres.')); ?>
+    </div>
+<?php endif; ?>
 
 <?php if (empty($mesStages)): ?>
     <div class="card mes-offres-empty">
@@ -38,8 +59,11 @@
                 <p class="offre-desc"><?php echo nl2br(htmlspecialchars($stage['description'] ?? 'Description non disponible')); ?></p>
 
                 <div class="offre-meta">
+                    <p><strong>Filière :</strong> <?php echo htmlspecialchars($stage['filiere'] ?? 'Non renseignée'); ?></p>
                     <p><?php echo htmlspecialchars($stage['location'] ?? 'Lieu non disponible'); ?></p>
                     <p>Du <?php echo htmlspecialchars($stage['start_date'] ?? 'N/A'); ?> au <?php echo htmlspecialchars($stage['end_date'] ?? 'N/A'); ?></p>
+                    <p><strong>Durée :</strong> <?php echo htmlspecialchars((string) ($stage['duration_weeks'] ?? 'N/A')); ?> semaine(s)</p>
+                    <p><strong>Statut :</strong> <?php echo htmlspecialchars($stage['status'] ?? 'ouverte'); ?></p>
                 </div>
                 <a href="candidatures.php?id=<?php echo urlencode($stage['id'] ?? ''); ?>" class="btn btn-primary mt-4">Voir les candidatures</a>
             </div>

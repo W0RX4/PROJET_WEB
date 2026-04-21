@@ -28,11 +28,22 @@
     <?php
         $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
         $stages = $client->getAllData('stages');
+        $allMissions = $client->getAllData('missions') ?: [];
+        $missionsByStage = [];
+
+        foreach ($allMissions as $mission) {
+            $stageId = (int) ($mission['stage_id'] ?? 0);
+            if ($stageId > 0) {
+                $missionsByStage[$stageId][] = $mission;
+            }
+        }
         
         if (empty($stages)) {
             echo "<div class='card'><p>Aucune offre de stage n'est disponible pour le moment.</p></div>";
         } else {
             foreach ($stages as $stage) {
+                $stageId = (int) ($stage['id'] ?? 0);
+                $stageMissions = $missionsByStage[$stageId] ?? [];
                 ?>
                 <div class="card">
                     <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">
@@ -48,6 +59,21 @@
                         <p><?php echo htmlspecialchars($stage['location'] ?? 'Lieu non disponible'); ?></p>
                         <p>Du <?php echo htmlspecialchars($stage['start_date'] ?? 'N/A'); ?> au <?php echo htmlspecialchars($stage['end_date'] ?? 'N/A'); ?></p>
                     </div>
+                    <?php if (!empty($stageMissions)): ?>
+                        <div style="margin-bottom: 1.25rem;">
+                            <p style="font-weight: 600; margin-bottom: 0.5rem;">Missions proposées</p>
+                            <ul style="padding-left: 1.2rem; color: var(--text-secondary);">
+                                <?php foreach ($stageMissions as $mission): ?>
+                                    <li style="margin-bottom: 0.4rem;">
+                                        <strong style="color: var(--text-primary);"><?php echo htmlspecialchars($mission['title'] ?? 'Mission'); ?></strong>
+                                        <?php if (!empty($mission['description'])): ?>
+                                            : <?php echo htmlspecialchars($mission['description']); ?>
+                                        <?php endif; ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    <?php endif; ?>
                     <a href="postuler.php?stage_id=<?php echo urlencode($stage['id'] ?? ''); ?>" class="btn btn-primary mt-4">Postuler</a>
                 </div>
                 <?php
