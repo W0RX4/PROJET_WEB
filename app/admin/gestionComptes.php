@@ -16,6 +16,65 @@ $baseUrl = rtrim($_ENV['SUPABASE_URL'], '/') . '/rest/v1';
  
 $successMsg = '';
 $errorMsg   = '';
+
+function callSupabase(string $method, string $endpoint, string $apiKey, ?array $payload = null): array
+{
+    $ch = curl_init($endpoint);
+    $headers = [
+        'apikey: ' . $apiKey,
+        'Authorization: Bearer ' . $apiKey,
+        'Accept: application/json',
+    ];
+
+    if ($payload !== null) {
+        $headers[] = 'Content-Type: application/json';
+    }
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST  => $method,
+        CURLOPT_HTTPHEADER     => $headers,
+    ]);
+
+    if ($payload !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    }
+
+    $response = curl_exec($ch);
+    $curlError = curl_error($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $data = json_decode($response ?: '', true);
+
+    return [
+        'ok' => $curlError === '' && $code >= 200 && $code < 300,
+        'code' => $code,
+        'error' => $curlError,
+        'data' => $data,
+        'raw' => $response ?: '',
+    ];
+}
+
+function getSupabaseErrorMessage(array $result, string $fallback): string
+{
+    if (!empty($result['error'])) {
+        return $fallback . ' (' . $result['error'] . ')';
+    }
+
+    if (is_array($result['data'])) {
+        $details = $result['data']['message']
+            ?? $result['data']['details']
+            ?? $result['data']['hint']
+            ?? null;
+
+        if (is_string($details) && $details !== '') {
+            return $fallback . ' (' . $details . ')';
+        }
+    }
+
+    return $fallback;
+}
  
 // ── SUPPRESSION ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -23,20 +82,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $userId = (int) ($_POST['user_id'] ?? 0);
  
     if ($action === 'delete' && $userId) {
-        $ch = curl_init("$baseUrl/users?id=eq.$userId");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST  => 'DELETE',
-            CURLOPT_HTTPHEADER     => [
-                'apikey: ' . $apiKey,
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
-            ],
-        ]);
-        curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-        $code >= 200 && $code < 300 ? $successMsg = 'Compte supprimé.' : $errorMsg = 'Erreur lors de la suppression.';
+        $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
+
+        if ($userId === $currentUserId) {
+            $errorMsg = 'Vous ne pouvez pas supprimer votre propre compte.';
+        } else {
+            // Nettoie d'abord les relations qui bloquent la suppression SQL.
+            $cleanupSteps = [
+                [
+                    'method' => 'DELETE',
+                    'url' => "$baseUrl/candidatures?student_id=eq.$userId",
+                    'payload' => null,
+                    'message' => 'Erreur lors de la suppression des candidatures associées.',
+                ],
+                [
+                    'method' => 'PATCH',
+                    'url' => "$baseUrl/stages?student_id=eq.$userId",
+                    'payload' => ['student_id' => null],
+                    'message' => 'Erreur lors du détachement des stages de l\'étudiant.',
+                ],
+                [
+                    'method' => 'PATCH',
+                    'url' => "$baseUrl/stages?tutor_id=eq.$userId",
+                    'payload' => ['tutor_id' => null],
+                    'message' => 'Erreur lors du détachement des stages du tuteur.',
+                ],
+                [
+                    'method' => 'PATCH',
+                    'url' => "$baseUrl/users?id=eq.$userId",
+                    'payload' => ['stage_id' => null],
+                    'message' => 'Erreur lors du nettoyage du compte.',
+                ],
+            ];
+
+            foreach ($cleanupSteps as $step) {
+                $result = callSupabase($step['method'], $step['url'], $apiKey, $step['payload']);
+                if (!$result['ok']) {
+                    $errorMsg = getSupabaseErrorMessage($result, $step['message']);
+                    break;
+                }
+            }
+
+            if ($errorMsg === '') {
+                $deleteResult = callSupabase('DELETE', "$baseUrl/users?id=eq.$userId", $apiKey);
+                if ($deleteResult['ok']) {
+                    $successMsg = 'Compte supprimé.';
+                } else {
+                    $errorMsg = getSupabaseErrorMessage($deleteResult, 'Erreur lors de la suppression du compte.');
+                }
+            }
+        }
  
     } elseif ($action === 'update_type' && $userId) {
         $newType = $_POST['type'] ?? '';
@@ -44,38 +139,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!in_array($newType, $allowed)) {
             $errorMsg = 'Type invalide.';
         } else {
-            $ch = curl_init("$baseUrl/users?id=eq.$userId");
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_CUSTOMREQUEST  => 'PATCH',
-                CURLOPT_POSTFIELDS     => json_encode(['type' => $newType]),
-                CURLOPT_HTTPHEADER     => [
-                    'apikey: ' . $apiKey,
-                    'Authorization: Bearer ' . $apiKey,
-                    'Content-Type: application/json',
-                    'Prefer: return=minimal',
-                ],
-            ]);
-            curl_exec($ch);
-            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            $code >= 200 && $code < 300 ? $successMsg = 'Type mis à jour.' : $errorMsg = 'Erreur lors de la mise à jour.';
+            $updateResult = callSupabase('PATCH', "$baseUrl/users?id=eq.$userId", $apiKey, ['type' => $newType]);
+            if ($updateResult['ok']) {
+                $successMsg = 'Type mis à jour.';
+            } else {
+                $errorMsg = getSupabaseErrorMessage($updateResult, 'Erreur lors de la mise à jour.');
+            }
         }
     }
 }
  
 // ── RÉCUPÉRATION DES USERS ───────────────────────────────────────────────────
-$ch = curl_init("$baseUrl/users?select=id,email,username,type,created_at&order=created_at.desc");
-curl_setopt_array($ch, [
-    CURLOPT_RETURNTRANSFER => true,
-    CURLOPT_HTTPHEADER     => [
-        'apikey: ' . $apiKey,
-        'Authorization: Bearer ' . $apiKey,
-        'Accept: application/json',
-    ],
-]);
-$users = json_decode(curl_exec($ch), true) ?? [];
-curl_close($ch);
+$usersResult = callSupabase('GET', "$baseUrl/users?select=id,email,username,type,created_at&order=created_at.desc", $apiKey);
+$users = is_array($usersResult['data']) ? $usersResult['data'] : [];
+
+if (!$usersResult['ok'] && $errorMsg === '') {
+    $errorMsg = getSupabaseErrorMessage($usersResult, 'Impossible de charger la liste des comptes.');
+}
  
 $typesLabels = [
     'etudiant'   => 'Étudiant',
@@ -111,7 +191,7 @@ $typesLabels = [
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
-                    <?php $isSelf = ($user['id'] === ($_SESSION['user_id'] ?? null)); ?>
+                    <?php $isSelf = (int) ($user['id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0); ?>
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <td style="padding:0.75rem;"><?php echo $user['id']; ?></td>
                         <td style="padding:0.75rem;"><?php echo htmlspecialchars($user['username'] ?? '—'); ?></td>
