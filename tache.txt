@@ -3,29 +3,28 @@ Audit de l'existant
 ✅ Ce qui EST fait
 Composant	Détails
 Framework	Slim PHP 4 + PhpRenderer
-BDD	Supabase (PostgreSQL) — 3 tables : users, stages, candidatures
-Auth	Login / Register fonctionnels (5 types : admin, etudiant, entreprise, tuteur, jury)
+BDD	Supabase (PostgreSQL) — tables actives : users, stages, candidatures, conventions, missions, remarques, documents, formations, traces, cahier_stage, two_factor_codes, formation_requests
+Auth	Login / Register fonctionnels (5 types : admin, etudiant, entreprise, tuteur, jury) + correctif login via REST Supabase
 Routing	
 index.php
  avec routes GET/POST pour login, register, logout + pages protégées
-Étudiant	Dashboard, consultation offres, candidature, suivi candidatures
-Entreprise	Dashboard, ajout de stage, liste offres, gestion candidatures
-Admin	Page d'accueil skeleton (boutons non fonctionnels)
+Étudiant	Dashboard, consultation offres avec missions, candidature, suivi candidatures
+Entreprise	Dashboard, ajout de stage avec missions, liste offres, gestion candidatures, validation convention, remarques
+Admin	Dashboard + gestion des comptes (lister, modifier le type, supprimer)
 Tuteur	Page d'accueil skeleton (aucune fonctionnalité)
 Jury	Page d'accueil skeleton (aucune fonctionnalité)
 CSS	311 lignes, design system avec tokens (Inter font, cards, forms, buttons, alerts)
 Header/Footer	Navigation dynamique par type d'utilisateur
 ❌ Ce qui MANQUE (par priorité)
 Priorité	Fonctionnalité manquante
-🔴 Critique	Espace Admin fonctionnel (gestion comptes, offres, formations)
+🔴 Critique	Espace Admin incomplet (gestion offres, formations, dashboard complet)
 🔴 Critique	Espace Tuteur fonctionnel (validation convention, suivi étudiants, dépôt rapport)
 🔴 Critique	Espace Jury fonctionnel (consultation dossiers, validation stages, remarques)
-🔴 Critique	Upload/gestion de documents (rapports, conventions, fiches évaluation)
-🟠 Important	Base de données incomplète (tables documents, remarques, formations, conventions, traces)
+🔴 Critique	Upload/gestion complète de documents (rapports, conventions, fiches évaluation)
 🟠 Important	Authentification 2FA (2e niveau d'auth exigé par le cahier des charges)
 🟠 Important	Recherche/filtrage des stages (par filière, durée, compétences)
 🟠 Important	Cahier de stage étudiant
-🟠 Important	Système de remarques (toutes les parties)
+🟠 Important	Système de remarques complet (toutes les parties)
 🟡 Moyen	Système de trace/logs (fichier de suivi des requêtes)
 🟡 Moyen	Notifications admin (flux périodiques)
 🟡 Moyen	Design responsive (Mobile-First, media queries)
@@ -84,10 +83,10 @@ Sprint 4 (Semaine 4) — Polissage & Accessibilité
 Rôle : Pages fonctionnelles PHP pour les 3 rôles non implémentés
 
 Sprint 1 (Semaine 1) — Espace Admin
- Page gestion des comptes (gestionComptes.php) : lister, modifier, supprimer des users
+ ✅ Page gestion des comptes (gestionComptes.php) : lister, modifier, supprimer des users
  Page gestion des offres (gestionOffres.php) : valider/refuser les offres d'entreprises
  Page gestion des formations (gestionFormations.php) : CRUD filières/formations
- Ajouter les routes correspondantes dans 
+ ✅ Ajouter les routes correspondantes dans 
 index.php
 Sprint 2 (Semaine 2) — Espace Tuteur
  Page suivi des étudiants (suiviEtudiants.php) : liste étudiants assignés + état du stage
@@ -102,9 +101,9 @@ Sprint 3 (Semaine 3) — Espace Jury
  Bouton de validation de stage + formulaire de remarques
  Compléter le dashboard étudiant : cahier de stage, upload docs, remarques
 Sprint 4 (Semaine 4) — Entreprise compléments & Polissage
- Ajouter la validation de convention en ligne côté entreprise
- Ajouter l'attribution de missions aux étudiants
- Ajouter les remarques entreprise sur le stage
+ Revoir la validation de convention en ligne côté entreprise
+ ✅ Ajouter l'attribution de missions aux étudiants
+ ✅ Ajouter les remarques entreprise sur le stage
  Contribuer au rapport (section fonctionnalités par rôle)
 🅳️ Membre D — DevOps, Qualité, Documentation & Gestion de projet
 Rôle : Git, tests, rapport, soutenance, Gantt, SCRUM
@@ -255,8 +254,8 @@ Tâche	Dépend de
 Verification Plan
 Tests manuels (par fonctionnalité)
 Login/Register — Tester les 5 types d'utilisateurs, vérifier les redirections
-Espace Étudiant — Consulter offres, postuler, voir candidatures, cahier de stage
-Espace Entreprise — Créer offre, voir candidatures reçues, valider convention
+Espace Étudiant — Consulter offres avec missions, postuler, voir candidatures, cahier de stage
+Espace Entreprise — Créer offre avec missions, voir candidatures reçues, valider convention, ajouter remarques
 Espace Tuteur — Voir étudiants assignés, valider convention, télécharger docs
 Espace Jury — Consulter dossiers, valider stages, ajouter remarques
 Espace Admin — Gérer comptes, offres, formations
