@@ -1,8 +1,8 @@
 <?php
     require_once __DIR__ . '/../vendor/autoload.php';
+    require_once __DIR__ . '/../supabaseQuery/restClient.php';
 
     use Dotenv\Dotenv;
-    use Supabase\Client\Functions;
 
     $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
     $dotenv->safeLoad();
@@ -14,17 +14,24 @@
 
     $email = $_POST['email'] ?? '';
     $password = $_POST['password'] ?? '';
+    $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
+    $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
 
-    $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
-    $users = $client->getAllData('users');
+    $usersResult = supabaseRestRequest(
+        'GET',
+        $baseUrl . '/users?email=eq.' . rawurlencode($email) . '&select=id,email,username,password,type&limit=1',
+        $apiKey
+    );
 
-    $user = null;
-    foreach ($users as $item) {
-        if (($item['email'] ?? '') === $email) {
-            $user = $item;
-            break;
-        }
+    if (!$usersResult['ok']) {
+        $_SESSION['error'] = supabaseRestErrorMessage($usersResult, 'Impossible de vérifier vos identifiants pour le moment.');
+        session_write_close();
+        header('Location: /login');
+        exit;
     }
+
+    $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
+    $user = $users[0] ?? null;
 
     if ($user && password_verify($password, $user['password'])) {
         $_SESSION['user_id'] = $user['id'] ?? null;
