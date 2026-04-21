@@ -18,6 +18,13 @@
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php if(isset($_SESSION['error'])): ?>
+    <div class="alert alert-error">
+        <?php echo htmlspecialchars($_SESSION['error']); ?>
+    </div>
+    <?php unset($_SESSION['error']); ?>
+<?php endif; ?>
+
 <div class="card">
     <h3>Ajouter un stage</h3>
     <form action="ajouterStage.php" method="post">
@@ -39,6 +46,19 @@
         <div class="form-group">
             <label class="form-label" for="description">Description du stage</label>
             <textarea class="form-control" id="description" name="description" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label" for="missions">Missions proposées</label>
+            <textarea
+                class="form-control"
+                id="missions"
+                name="missions"
+                placeholder="Une mission par ligne&#10;Ex: Développer le tableau de bord&#10;Ex: Rédiger la documentation | Formaliser les procédures internes"
+            ></textarea>
+            <small style="display:block; margin-top:0.45rem; color:var(--text-secondary);">
+                Optionnel. Vous pouvez écrire une mission par ligne, avec une description après `|` si besoin.
+            </small>
         </div>
 
         <div class="form-group">
