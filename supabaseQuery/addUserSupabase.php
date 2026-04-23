@@ -1,31 +1,40 @@
 <?php
 
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/restClient.php';
 
 use Dotenv\Dotenv;
-use Supabase\Client\Functions;
 
-$dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
-
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: login.php');
-    exit;
+if (!isset($_ENV['SUPABASE_URL'])) {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
+    $dotenv->safeLoad();
 }
 
 function addUserSupabase($email, $username, $password, $type) {
-    $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
-    $user = [
-        'email' => $email,
+    $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
+    $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
+
+    $payload = [
+        'email'    => $email,
         'username' => $username,
-        // On vérifie que le mot de passe n'est pas nul avant le hash
         'password' => password_hash($password ?? '', PASSWORD_BCRYPT),
-        'type' => $type,
+        'type'     => $type,
     ];
 
-    return $client->postData('users', $user);
-}
+    $result = supabaseRestRequest(
+        'POST',
+        $baseUrl . '/users',
+        $apiKey,
+        $payload,
+        ['Prefer: return=representation']
+    );
 
-// Exemple d'appel :
-// addUserSupabase($client, 'test@example.com', 'Pseudo', '123456', 'admin');
-?>
+    if (!$result['ok']) {
+        return [
+            'code'    => $result['code'],
+            'message' => supabaseRestErrorMessage($result, "Erreur lors de la creation du compte"),
+        ];
+    }
+
+    return $result['data'];
+}

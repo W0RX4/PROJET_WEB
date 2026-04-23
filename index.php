@@ -50,6 +50,21 @@
         return $response;
     });
 
+    // --- 2FA ---
+    $app->get('/verify-2fa', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/connection/verify_2fa.php', $args);
+    });
+
+    $app->post('/verify-2fa', function (Request $request, Response $response, $args) {
+        require __DIR__ . '/connection/check_2fa.php';
+        return $response;
+    });
+
+    $app->get('/resend-2fa', function (Request $request, Response $response, $args) {
+        require __DIR__ . '/connection/resend_2fa.php';
+        return $response;
+    });
+
     // --- ROUTES PROTEGEES (App) ---
 
     // Route pour l'admin
