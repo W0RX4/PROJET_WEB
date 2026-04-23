@@ -49,11 +49,11 @@ function stageStatusBadgeClass(string $status): string
 {
     $normalized = strtolower(trim($status));
 
-    if (in_array($normalized, ['retenue', 'validée', 'validee', 'en cours'], true)) {
+    if (in_array($normalized, ['retenue', 'validée', 'validee', 'en cours', 'acceptée par l\'étudiant', 'convention envoyée'], true)) {
         return 'badge badge-valid';
     }
 
-    if (in_array($normalized, ['refusée', 'refusee', 'annulée', 'annulee'], true)) {
+    if (in_array($normalized, ['refusée', 'refusee', 'annulée', 'annulee', 'refusée par l\'étudiant', 'refusee par l\'etudiant'], true)) {
         return 'badge badge-progress';
     }
 
@@ -75,55 +75,69 @@ if (!$stageFetchResult['ok'] || !$stage || !isOwnedByCompany($stage, $companyId,
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    $action = $_POST['action'];
+    $action = (string) $_POST['action'];
 
-    if ($action === 'validate_convention') {
+    if ($action === 'accept_candidate') {
         $studentId = (int) ($_POST['student_id'] ?? 0);
-        $selectedStudentId = (int) ($stage['student_id'] ?? 0);
 
         if ($studentId <= 0) {
             $_SESSION['error'] = 'Étudiant invalide.';
             redirectToStage($stageId);
         }
 
-        $candidateResult = supabaseRestRequest(
+        $stageCandidatesResult = supabaseRestRequest(
             'GET',
-            "$baseUrl/candidatures?stage_id=eq.$stageId&student_id=eq.$studentId&select=id,status",
+            "$baseUrl/candidatures?stage_id=eq.$stageId&select=id,student_id,status",
             $apiKey
         );
-        $candidate = is_array($candidateResult['data']) && isset($candidateResult['data'][0]) ? $candidateResult['data'][0] : null;
+        $stageCandidates = is_array($stageCandidatesResult['data']) ? $stageCandidatesResult['data'] : [];
+        $candidate = null;
+        $hasConflictingCandidate = false;
 
-        if (!$candidateResult['ok'] || !$candidate) {
-            $_SESSION['error'] = 'Impossible de valider une convention pour un étudiant non candidat.';
+        foreach ($stageCandidates as $stageCandidate) {
+            if ((int) ($stageCandidate['student_id'] ?? 0) === $studentId) {
+                $candidate = $stageCandidate;
+            } elseif (in_array((string) ($stageCandidate['status'] ?? ''), ['proposition envoyée', 'acceptée par l\'étudiant', 'convention envoyée'], true)) {
+                $hasConflictingCandidate = true;
+            }
+        }
+
+        if (!$stageCandidatesResult['ok'] || !$candidate) {
+            $_SESSION['error'] = 'Impossible d’accepter un étudiant non candidat.';
             redirectToStage($stageId);
         }
 
-        if ($selectedStudentId !== 0 && $selectedStudentId !== $studentId) {
-            $_SESSION['error'] = 'Un autre étudiant est déjà affecté à cette offre.';
+        if ((int) ($stage['student_id'] ?? 0) !== 0 && (int) ($stage['student_id'] ?? 0) !== $studentId) {
+            $_SESSION['error'] = 'Un autre étudiant a déjà accepté cette offre.';
             redirectToStage($stageId);
         }
 
-        $conventionResult = supabaseRestRequest(
+        if ($hasConflictingCandidate) {
+            $_SESSION['error'] = 'Une autre candidature est déjà en attente de réponse ou a déjà été confirmée pour cette offre.';
+            redirectToStage($stageId);
+        }
+
+        $conventionLookup = supabaseRestRequest(
             'GET',
             "$baseUrl/conventions?stage_id=eq.$stageId&student_id=eq.$studentId&select=id",
             $apiKey
         );
-        $existingConvention = is_array($conventionResult['data']) && isset($conventionResult['data'][0]) ? $conventionResult['data'][0] : null;
+        $existingConvention = is_array($conventionLookup['data']) && isset($conventionLookup['data'][0]) ? $conventionLookup['data'][0] : null;
 
-        if (!$conventionResult['ok']) {
-            $_SESSION['error'] = supabaseRestErrorMessage($conventionResult, 'Impossible de vérifier la convention.');
+        if (!$conventionLookup['ok']) {
+            $_SESSION['error'] = supabaseRestErrorMessage($conventionLookup, 'Impossible de préparer la convention.');
             redirectToStage($stageId);
         }
 
         if ($existingConvention) {
-            $saveConventionResult = supabaseRestRequest(
+            $conventionSave = supabaseRestRequest(
                 'PATCH',
                 "$baseUrl/conventions?id=eq." . (int) $existingConvention['id'],
                 $apiKey,
                 ['company_validated' => true]
             );
         } else {
-            $saveConventionResult = supabaseRestRequest(
+            $conventionSave = supabaseRestRequest(
                 'POST',
                 "$baseUrl/conventions",
                 $apiKey,
@@ -135,45 +149,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             );
         }
 
-        if (!$saveConventionResult['ok']) {
-            $_SESSION['error'] = supabaseRestErrorMessage($saveConventionResult, 'Impossible de valider la convention.');
+        if (!$conventionSave['ok']) {
+            $_SESSION['error'] = supabaseRestErrorMessage($conventionSave, 'Impossible de préparer la convention.');
             redirectToStage($stageId);
         }
 
-        $stageUpdatePayload = [
-            'student_id' => $studentId,
-            'status' => 'en cours',
-        ];
-
-        if ((int) ($stage['company_id'] ?? 0) === 0 && $companyId > 0) {
-            $stageUpdatePayload['company_id'] = $companyId;
-        }
-
-        $stageUpdateResult = supabaseRestRequest(
-            'PATCH',
-            "$baseUrl/stages?id=eq.$stageId",
-            $apiKey,
-            $stageUpdatePayload
-        );
-
-        if (!$stageUpdateResult['ok']) {
-            $_SESSION['error'] = supabaseRestErrorMessage($stageUpdateResult, 'Convention enregistrée mais impossible de lier l’étudiant au stage.');
-            redirectToStage($stageId);
-        }
-
-        $candidatureUpdateResult = supabaseRestRequest(
+        $candidateUpdate = supabaseRestRequest(
             'PATCH',
             "$baseUrl/candidatures?id=eq." . (int) $candidate['id'],
             $apiKey,
-            ['status' => 'retenue']
+            ['status' => 'proposition envoyée']
         );
 
-        if (!$candidatureUpdateResult['ok']) {
-            $_SESSION['error'] = supabaseRestErrorMessage($candidatureUpdateResult, 'Convention validée mais le statut de candidature n’a pas pu être mis à jour.');
+        if (!$candidateUpdate['ok']) {
+            $_SESSION['error'] = supabaseRestErrorMessage($candidateUpdate, 'Proposition envoyée, mais le statut de candidature n’a pas pu être mis à jour.');
             redirectToStage($stageId);
         }
 
-        $_SESSION['result'] = 'Convention validée et étudiant affecté au stage.';
+        $_SESSION['result'] = 'Proposition envoyée à l’étudiant. Il doit maintenant accepter ou refuser le stage.';
         redirectToStage($stageId);
     }
 
@@ -182,7 +175,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $description = trim((string) ($_POST['description'] ?? ''));
 
         if ((int) ($stage['student_id'] ?? 0) === 0) {
-            $_SESSION['error'] = 'Validez d’abord la convention d’un étudiant avant d’ajouter une mission.';
+            $_SESSION['error'] = 'L’étudiant doit d’abord accepter le stage avant l’ajout de missions complémentaires.';
             redirectToStage($stageId);
         }
 
@@ -285,9 +278,8 @@ $usersResult = supabaseRestRequest(
 );
 $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
 $usersMap = [];
-
 foreach ($users as $user) {
-    $usersMap[(int) $user['id']] = $user;
+    $usersMap[(int) ($user['id'] ?? 0)] = $user;
 }
 
 $conventionsByStudent = [];
@@ -306,6 +298,14 @@ foreach ($documents as $document) {
 $selectedStudentId = (int) ($stage['student_id'] ?? 0);
 $selectedStudent = $selectedStudentId > 0 ? ($usersMap[$selectedStudentId] ?? null) : null;
 $selectedConvention = $selectedStudentId > 0 ? ($conventionsByStudent[$selectedStudentId] ?? null) : null;
+$pendingProposal = null;
+foreach ($candidatures as $currentCandidature) {
+    if (($currentCandidature['status'] ?? '') === 'proposition envoyée') {
+        $pendingProposal = $currentCandidature;
+        break;
+    }
+}
+$pendingProposalStudent = $pendingProposal ? ($usersMap[(int) ($pendingProposal['student_id'] ?? 0)] ?? null) : null;
 
 require_once '../../includes/header.php';
 ?>
@@ -346,13 +346,14 @@ require_once '../../includes/header.php';
         <div>
             <p><strong>Durée :</strong> <?php echo htmlspecialchars((string) ($stage['duration_weeks'] ?? 'N/A')); ?> semaine(s)</p>
             <p><strong>Statut du stage :</strong> <span class="<?php echo htmlspecialchars(stageStatusBadgeClass((string) ($stage['status'] ?? 'ouverte'))); ?>"><?php echo htmlspecialchars($stage['status'] ?? 'ouverte'); ?></span></p>
-            <p><strong>Étudiant affecté :</strong> <?php echo htmlspecialchars($selectedStudent['username'] ?? 'Aucun pour le moment'); ?></p>
+            <p><strong>Étudiant confirmé :</strong> <?php echo htmlspecialchars($selectedStudent['username'] ?? 'Aucun pour le moment'); ?></p>
+            <p><strong>Proposition en attente :</strong> <?php echo htmlspecialchars($pendingProposalStudent['username'] ?? 'Aucune'); ?></p>
         </div>
     </div>
 
     <?php if ($selectedConvention): ?>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
-            <p><strong>Convention entreprise :</strong> <?php echo !empty($selectedConvention['company_validated']) ? 'validée' : 'en attente'; ?></p>
+            <p><strong>Convention côté entreprise :</strong> <?php echo !empty($selectedConvention['company_validated']) ? 'préparée' : 'en attente'; ?></p>
             <p><strong>Validation tuteur :</strong> <?php echo !empty($selectedConvention['tutor_validated']) ? 'validée' : 'en attente'; ?></p>
             <p><strong>Validation admin :</strong> <?php echo !empty($selectedConvention['admin_validated']) ? 'validée' : 'en attente'; ?></p>
         </div>
@@ -365,8 +366,10 @@ require_once '../../includes/header.php';
         <p style="margin-bottom: 1rem;">
             <?php if ($selectedStudent): ?>
                 Les missions ajoutées ici sont associées au stage de <?php echo htmlspecialchars($selectedStudent['username']); ?>.
+            <?php elseif ($pendingProposalStudent): ?>
+                L’étudiant <?php echo htmlspecialchars($pendingProposalStudent['username']); ?> doit d’abord accepter la proposition avant l’affectation définitive.
             <?php else: ?>
-                Validez d’abord une convention pour rattacher un étudiant à cette offre.
+                Sélectionnez d’abord un candidat pour cette offre. Les missions complémentaires pourront être ajoutées après confirmation de l’étudiant.
             <?php endif; ?>
         </p>
 
@@ -436,7 +439,7 @@ require_once '../../includes/header.php';
 
 <div class="card" style="margin-top: 1.5rem;">
     <h3>Candidatures reçues</h3>
-    <p>Consultez les documents des étudiants, puis validez la convention en ligne pour le profil retenu.</p>
+    <p>Consultez les documents des étudiants puis envoyez une proposition au profil retenu. L’étudiant confirmera ensuite le stage depuis son espace.</p>
 </div>
 
 <?php if (!$candidaturesResult['ok']): ?>
@@ -455,22 +458,25 @@ require_once '../../includes/header.php';
                 $student = $usersMap[$studentId] ?? null;
                 $studentName = $student['username'] ?? 'Nom non disponible';
                 $studentEmail = $student['email'] ?? 'Email non disponible';
+                $status = (string) ($candidature['status'] ?? 'en attente');
                 $convention = $conventionsByStudent[$studentId] ?? null;
                 $studentDocuments = $documentsByUser[$studentId] ?? [];
                 $cvUrl = !empty($candidature['cv_url']) ? getSupabaseSignedUrl($candidature['cv_url'], $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) : null;
                 $lmUrl = !empty($candidature['cover_letter_url']) ? getSupabaseSignedUrl($candidature['cover_letter_url'], $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) : null;
                 $isSelectedStudent = $selectedStudentId !== 0 && $selectedStudentId === $studentId;
-                $canValidateThisStudent = $selectedStudentId === 0 || $isSelectedStudent;
-                $isConventionValidated = !empty($convention['company_validated']);
+                $isPendingProposal = $pendingProposal && (int) ($pendingProposal['student_id'] ?? 0) === $studentId;
+                $hasAcceptedStudent = $selectedStudentId !== 0;
+                $canSelectThisStudent = !$hasAcceptedStudent && (!$pendingProposal || $isPendingProposal);
+                $isConventionPrepared = !empty($convention['company_validated']);
             ?>
             <div class="card offre-card">
                 <h3 class="offre-title"><?php echo htmlspecialchars($studentName); ?></h3>
                 <p class="offre-company"><?php echo htmlspecialchars($studentEmail); ?></p>
 
                 <div class="offre-meta" style="margin-top: 0;">
-                    <p><strong>Statut candidature :</strong> <span class="<?php echo htmlspecialchars(stageStatusBadgeClass((string) ($candidature['status'] ?? 'en attente'))); ?>"><?php echo htmlspecialchars($candidature['status'] ?? 'en attente'); ?></span></p>
-                    <p><strong>Convention entreprise :</strong> <?php echo $isConventionValidated ? 'validée' : 'en attente'; ?></p>
-                    <p><strong>Étudiant retenu :</strong> <?php echo $isSelectedStudent ? 'oui' : 'non'; ?></p>
+                    <p><strong>Statut candidature :</strong> <span class="<?php echo htmlspecialchars(stageStatusBadgeClass($status)); ?>"><?php echo htmlspecialchars($status); ?></span></p>
+                    <p><strong>Convention entreprise :</strong> <?php echo $isConventionPrepared ? 'préparée' : 'non préparée'; ?></p>
+                    <p><strong>Étudiant confirmé :</strong> <?php echo $isSelectedStudent ? 'oui' : 'non'; ?></p>
                 </div>
 
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
@@ -504,17 +510,23 @@ require_once '../../includes/header.php';
                 <?php endif; ?>
 
                 <div style="margin-top: 1.25rem;">
-                    <?php if ($canValidateThisStudent): ?>
-                        <form method="POST" onsubmit="return confirm('Valider la convention pour cet étudiant ?');">
-                            <input type="hidden" name="action" value="validate_convention">
+                    <?php if ($status === 'proposition envoyée'): ?>
+                        <p style="color: var(--text-secondary);">Proposition envoyée. En attente de la réponse de l’étudiant.</p>
+                    <?php elseif (in_array($status, ['acceptée par l\'étudiant', 'convention envoyée'], true)): ?>
+                        <p style="color: var(--text-secondary);">Étudiant confirmé. Il peut maintenant déposer sa convention depuis son espace.</p>
+                    <?php elseif ($status === 'refusée par l\'étudiant'): ?>
+                        <p style="color: var(--text-secondary);">Cet étudiant a refusé la proposition. Vous pouvez choisir un autre candidat.</p>
+                    <?php elseif ($canSelectThisStudent): ?>
+                        <form method="POST" onsubmit="return confirm('Envoyer une proposition de stage à cet étudiant ?');">
+                            <input type="hidden" name="action" value="accept_candidate">
                             <input type="hidden" name="stage_id" value="<?php echo $stageId; ?>">
                             <input type="hidden" name="student_id" value="<?php echo $studentId; ?>">
-                            <button type="submit" class="btn <?php echo $isConventionValidated ? 'btn-secondary' : 'btn-primary'; ?>" <?php echo $isConventionValidated ? 'disabled' : ''; ?>>
-                                <?php echo $isConventionValidated ? 'Convention déjà validée' : 'Valider la convention'; ?>
+                            <button type="submit" class="btn btn-primary">
+                                Envoyer la proposition
                             </button>
                         </form>
                     <?php else: ?>
-                        <p style="color: var(--text-secondary);">Une convention a déjà été validée pour un autre étudiant sur cette offre.</p>
+                        <p style="color: var(--text-secondary);">Une autre candidature est déjà en attente de réponse ou a déjà été confirmée pour cette offre.</p>
                     <?php endif; ?>
                 </div>
             </div>

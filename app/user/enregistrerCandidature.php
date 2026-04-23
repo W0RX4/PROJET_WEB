@@ -7,6 +7,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../supabaseQuery/storageClient.php';
 
 use Dotenv\Dotenv;
 use Supabase\Client\Functions;
@@ -17,57 +18,17 @@ $dotenv->safeLoad();
 $supabaseUrl = $_ENV['SUPABASE_URL'] ?? '';
 $supabaseKey = $_ENV['SUPABASE_KEY'] ?? '';
 
-// Fonction pour uploader un fichier sur Supabase Storage (Bucket "candidatures")
-function uploadToSupabaseStorage($file, $userEmail, $type, $supabaseUrl, $supabaseKey) {
-    if ($file['error'] !== UPLOAD_ERR_OK) return null;
-
-    $bucket = "candidatures";
-    
-    // On génère un nom unique pour éviter d'écraser des fichiers
-    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $fileName = $type . "_" . time() . "_" . uniqid() . "." . $extension;
-    // On crée un sous-dossier par utilisateur : userEmail/nomFichier
-    // On nettoie l'email pour l'utiliser comme nom de dossier (pas d'urlencode qui casse le path)
-    $safeEmail = str_replace(['@', '.', '+'], ['_at_', '_', '_'], $userEmail);
-    $filePath = $safeEmail . "/" . $fileName;
-
-    $fileData = file_get_contents($file['tmp_name']);
-    $url = $supabaseUrl . '/storage/v1/object/' . $bucket . '/' . ltrim($filePath, '/');
-
-    // Requête cURL vers l'API Storage
-    $ch = curl_init();
-    $headers = [
-        "apikey: " . $supabaseKey,
-        "Authorization: Bearer " . $supabaseKey,
-        "Content-Type: " . mime_content_type($file['tmp_name'])
-    ];
-
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $fileData);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    if ($httpCode >= 200 && $httpCode < 300) {
-        return $filePath; // Upload réussi, on renvoie le chemin ciblé
-    }
-
-    return null; // Échec
-}
-
 // 1. Upload des fichiers
 $cvPath = null;
 if (isset($_FILES['CV'])) {
-    $cvPath = uploadToSupabaseStorage($_FILES['CV'], $_SESSION['email'], 'CV', $supabaseUrl, $supabaseKey);
+    $cvUpload = uploadFileToSupabaseBucket($_FILES['CV'], $_SESSION['email'], 'CV', $supabaseUrl, $supabaseKey);
+    $cvPath = $cvUpload['path'] ?? null;
 }
 
 $letterPath = null;
 if (isset($_FILES['cover_letter'])) {
-    $letterPath = uploadToSupabaseStorage($_FILES['cover_letter'], $_SESSION['email'], 'LM', $supabaseUrl, $supabaseKey);
+    $letterUpload = uploadFileToSupabaseBucket($_FILES['cover_letter'], $_SESSION['email'], 'LM', $supabaseUrl, $supabaseKey);
+    $letterPath = $letterUpload['path'] ?? null;
 }
 
 if (!$cvPath || !$letterPath) {
