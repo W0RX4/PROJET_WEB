@@ -41,6 +41,9 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Se connecter</button>
             </form>
+            <p class="text-center mt-4" style="color: var(--text-secondary); font-size: 0.9rem;">
+                Si un facteur MFA est actif dans Supabase, une verification supplementaire vous sera demandee apres la connexion.
+            </p>
             <div class="text-center mt-4">
                 <a href="/register" style="color: var(--accent-color); text-decoration: none; font-weight: 500; font-size: 0.9rem;">Pas encore de compte ? S'inscrire</a>
             </div>

@@ -1,74 +1,130 @@
 <?php
-    require_once __DIR__ . '/../vendor/autoload.php';
-    require_once __DIR__ . '/sendMail.php';
-    require_once __DIR__ . '/../supabaseQuery/restClient.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../supabaseQuery/authClient.php';
+require_once __DIR__ . '/../supabaseQuery/userProfileClient.php';
+require_once __DIR__ . '/authSession.php';
 
-    use Dotenv\Dotenv;
+stageArchiveStartSession();
 
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: /login');
+    exit;
+}
 
-    $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
-    $dotenv->safeLoad();
+function stageArchiveFinalizeLoginFromAuthResult(array $authResult): void
+{
+    $authUser = is_array($authResult['data']['user'] ?? null) ? $authResult['data']['user'] : [];
 
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    if ($authUser === []) {
+        $_SESSION['error'] = 'La session Supabase est incomplete.';
         header('Location: /login');
         exit;
     }
 
-    $email = $_POST['email'] ?? '';
-    $password = $_POST['password'] ?? '';
-    $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
-    $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
+    $profileResult = stageArchiveEnsureProfileForAuthUser($authUser);
+    if (!($profileResult['ok'] ?? false)) {
+        $_SESSION['error'] = (string) ($profileResult['message'] ?? 'Impossible de preparer votre profil applicatif.');
+        header('Location: /login');
+        exit;
+    }
 
-    $usersResult = supabaseRestRequest(
-        'GET',
-        $baseUrl . '/users?email=eq.' . rawurlencode($email) . '&select=id,email,username,password,type&limit=1',
-        $apiKey
+    $profile = $profileResult['profile'];
+    $authUserId = (string) ($authUser['id'] ?? '');
+    $factorsResult = $authUserId !== '' ? supabaseAuthAdminListUserFactors($authUserId) : ['ok' => true, 'data' => []];
+
+    if (!$factorsResult['ok']) {
+        $_SESSION['error'] = supabaseAuthErrorMessage($factorsResult, 'Impossible de verifier les facteurs MFA Supabase pour ce compte.');
+        header('Location: /login');
+        exit;
+    }
+
+    $factors = is_array($factorsResult['data']) ? $factorsResult['data'] : [];
+    $verifiedFactor = null;
+
+    foreach ($factors as $factor) {
+        $status = strtolower((string) ($factor['status'] ?? ''));
+        if ($status === 'verified') {
+            $verifiedFactor = $factor;
+            break;
+        }
+    }
+
+    if ($verifiedFactor) {
+        if (empty($verifiedFactor['id'])) {
+            $_SESSION['error'] = 'Un facteur MFA Supabase est present, mais son identifiant est manquant.';
+            header('Location: /login');
+            exit;
+        }
+
+        $_SESSION['pending_supabase_auth'] = [
+            'profile' => $profile,
+            'auth_session' => $authResult['data'],
+            'factor_id' => (string) ($verifiedFactor['id'] ?? ''),
+            'factor_type' => (string) ($verifiedFactor['factor_type'] ?? $verifiedFactor['type'] ?? 'totp'),
+            'friendly_name' => (string) ($verifiedFactor['friendly_name'] ?? $verifiedFactor['name'] ?? ''),
+        ];
+        $_SESSION['success'] = 'Verification a deux facteurs requise par Supabase.';
+        header('Location: /verify-2fa');
+        exit;
+    }
+
+    stageArchiveSetAuthenticatedSession($profile, $authResult['data']);
+    header('Location: ' . stageArchiveDestinationForType((string) ($profile['type'] ?? '')));
+    exit;
+}
+
+function stageArchiveTryLegacyMigration(string $email, string $password): ?array
+{
+    $legacyProfile = stageArchiveFindProfileByEmail($email);
+    if (!$legacyProfile || !password_verify($password, (string) ($legacyProfile['password'] ?? ''))) {
+        return null;
+    }
+
+    $existingAuthUser = supabaseAuthAdminFindUserByEmail($email);
+    if ($existingAuthUser) {
+        return null;
+    }
+
+    $authCreate = supabaseAuthAdminCreateUser(
+        $email,
+        $password,
+        [
+            'username' => (string) ($legacyProfile['username'] ?? stageArchiveDefaultUsernameFromEmail($email)),
+            'type' => stageArchiveNormalizeUserType((string) ($legacyProfile['type'] ?? 'etudiant')),
+        ]
     );
 
-    if (!$usersResult['ok']) {
-        $_SESSION['error'] = supabaseRestErrorMessage($usersResult, 'Impossible de vérifier vos identifiants pour le moment.');
-        session_write_close();
-        header('Location: /login');
-        exit;
+    if (!$authCreate['ok']) {
+        $_SESSION['error'] = supabaseAuthErrorMessage($authCreate, 'Impossible de migrer ce compte vers Supabase Auth.');
+        return null;
     }
 
-    $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
-    $user = $users[0] ?? null;
+    $signInAfterMigration = supabaseAuthSignInWithPassword($email, $password);
+    return $signInAfterMigration['ok'] ? $signInAfterMigration : null;
+}
 
-    if (!$user || !password_verify($password, $user['password'])) {
-        $_SESSION['error'] = 'Email ou mot de passe incorrect.';
-        session_write_close();
-        header('Location: /login');
-        exit;
-    }
+$email = trim((string) ($_POST['email'] ?? ''));
+$password = (string) ($_POST['password'] ?? '');
 
-    // Generate 6-digit code with 10-minute expiration
-    $code = generateVerificationCode();
-    $_SESSION['pending_2fa'] = [
-        'user_id'  => $user['id'] ?? null,
-        'email'    => $email,
-        'username' => $user['username'] ?? '',
-        'type'     => $user['type'] ?? '',
-        'code_hash'=> password_hash($code, PASSWORD_BCRYPT),
-        'expires'  => time() + 600,
-        'attempts' => 0,
-    ];
-
-    $sent = sendVerificationEmail($email, $user['username'] ?? '', $code);
-
-    if (!$sent) {
-        unset($_SESSION['pending_2fa']);
-        $_SESSION['error'] = "Impossible d'envoyer l'email de verification. Reessayez plus tard.";
-        session_write_close();
-        header('Location: /login');
-        exit;
-    }
-
-    $_SESSION['success'] = 'Un code de verification vient de vous etre envoye par email.';
-    session_write_close();
-    header('Location: /verify-2fa');
+if ($email === '' || $password === '') {
+    $_SESSION['error'] = 'Email et mot de passe requis.';
+    header('Location: /login');
     exit;
-?>
+}
+
+$signInResult = supabaseAuthSignInWithPassword($email, $password);
+
+if (!$signInResult['ok']) {
+    $migratedSignIn = stageArchiveTryLegacyMigration($email, $password);
+    if ($migratedSignIn !== null) {
+        $signInResult = $migratedSignIn;
+    }
+}
+
+if (!$signInResult['ok']) {
+    $_SESSION['error'] = supabaseAuthErrorMessage($signInResult, 'Email ou mot de passe incorrect.');
+    header('Location: /login');
+    exit;
+}
+
+stageArchiveFinalizeLoginFromAuthResult($signInResult);

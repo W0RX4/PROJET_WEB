@@ -1,3 +1,8 @@
+<?php
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -13,6 +18,17 @@
         <div class="auth-card">
             <h1 class="auth-title">StageArchive</h1>
             <h2 class="text-center mb-4" style="color: var(--text-secondary); font-weight: 500; font-size: 1rem;">Creez votre compte</h2>
+
+            <?php
+                if (isset($_SESSION['error'])) {
+                    echo "<div class='alert alert-error'>" . $_SESSION['error'] . "</div>";
+                    unset($_SESSION['error']);
+                }
+                if (isset($_SESSION['success'])) {
+                    echo "<div class='alert alert-success'>" . $_SESSION['success'] . "</div>";
+                    unset($_SESSION['success']);
+                }
+            ?>
 
             <form method="post" action="/register">
                 <div class="form-group">
@@ -39,6 +55,9 @@
                 </div>
                 <button type="submit" class="btn btn-primary btn-block mt-4">Creer mon compte</button>
             </form>
+            <p class="text-center mt-4" style="color: var(--text-secondary); font-size: 0.9rem;">
+                La connexion est geree par Supabase Auth. La double authentification pourra ensuite etre activee dans l'espace <strong>Securite</strong>.
+            </p>
             <div class="text-center mt-4">
                 <a href="/login" style="color: var(--accent-color); text-decoration: none; font-weight: 500; font-size: 0.9rem;">Deja un compte ? Se connecter</a>
             </div>

@@ -54,11 +54,12 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
                 <?php elseif ($userType === 'jury'): ?>
                     <li><a href="#" class="nav-link">Dossiers a evaluer</a></li>
                 <?php elseif ($userType === 'admin'): ?>
-                    <li><a href="#" class="nav-link">Comptes</a></li>
+                    <li><a href="../admin/gestionComptes.php" class="nav-link">Comptes</a></li>
                     <li><a href="#" class="nav-link">Toutes les offres</a></li>
                 <?php endif; ?>
+                <li><a href="../account/security.php" class="nav-link">Securite</a></li>
                 <li><span class="nav-user"><?php echo htmlspecialchars($username); ?></span></li>
-                <li><a href="../../connection/logout.php" class="btn-logout">Deconnexion</a></li>
+                <li><a href="/logout" class="btn-logout">Deconnexion</a></li>
             </ul>
         </nav>
     </header>
@@ -80,11 +81,12 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
             <?php elseif ($userType === 'jury'): ?>
                 <li><a href="#" class="nav-link">Dossiers a evaluer</a></li>
             <?php elseif ($userType === 'admin'): ?>
-                <li><a href="#" class="nav-link">Comptes</a></li>
+                <li><a href="../admin/gestionComptes.php" class="nav-link">Comptes</a></li>
                 <li><a href="#" class="nav-link">Toutes les offres</a></li>
             <?php endif; ?>
+            <li><a href="../account/security.php" class="nav-link">Securite</a></li>
             <li><span class="nav-user"><?php echo htmlspecialchars($username); ?></span></li>
-            <li><a href="../../connection/logout.php" class="btn-logout">Deconnexion</a></li>
+            <li><a href="/logout" class="btn-logout">Deconnexion</a></li>
         </ul>
     </nav>
     <?php endif; ?>

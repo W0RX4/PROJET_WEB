@@ -1,5 +1,6 @@
 <?php
 require_once '../../includes/header.php';
+require_once __DIR__ . '/../../supabaseQuery/authClient.php';
  
 if ($_SESSION['type'] !== 'admin') {
     header('Location: /login');
@@ -75,6 +76,13 @@ function getSupabaseErrorMessage(array $result, string $fallback): string
 
     return $fallback;
 }
+
+function fetchPlatformUserById(int $userId, string $baseUrl, string $apiKey): ?array
+{
+    $result = callSupabase('GET', "$baseUrl/users?id=eq.$userId&select=id,email,username,type&limit=1", $apiKey);
+    $users = is_array($result['data']) ? $result['data'] : [];
+    return $users[0] ?? null;
+}
  
 // ── SUPPRESSION ──
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -87,8 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($userId === $currentUserId) {
             $errorMsg = 'Vous ne pouvez pas supprimer votre propre compte.';
         } else {
+            $targetUser = fetchPlatformUserById($userId, $baseUrl, $apiKey);
+
+            if (!$targetUser) {
+                $errorMsg = 'Compte introuvable.';
+            }
+
             // Nettoie d'abord les relations qui bloquent la suppression SQL.
-            $cleanupSteps = [
+            $cleanupSteps = $errorMsg === '' ? [
                 [
                     'method' => 'DELETE',
                     'url' => "$baseUrl/candidatures?student_id=eq.$userId",
@@ -113,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'payload' => ['stage_id' => null],
                     'message' => 'Erreur lors du nettoyage du compte.',
                 ],
-            ];
+            ] : [];
 
             foreach ($cleanupSteps as $step) {
                 $result = callSupabase($step['method'], $step['url'], $apiKey, $step['payload']);
@@ -126,7 +140,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($errorMsg === '') {
                 $deleteResult = callSupabase('DELETE', "$baseUrl/users?id=eq.$userId", $apiKey);
                 if ($deleteResult['ok']) {
-                    $successMsg = 'Compte supprimé.';
+                    $authUser = supabaseAuthAdminFindUserByEmail((string) ($targetUser['email'] ?? ''));
+                    if ($authUser && !empty($authUser['id'])) {
+                        $authDelete = supabaseAuthAdminDeleteUser((string) $authUser['id']);
+                        if (!$authDelete['ok']) {
+                            $errorMsg = supabaseAuthErrorMessage($authDelete, 'Le profil applicatif a ete supprime, mais pas le compte Supabase Auth.');
+                        }
+                    }
+
+                    if ($errorMsg === '') {
+                        $successMsg = 'Compte supprime dans le profil applicatif et dans Supabase Auth.';
+                    }
                 } else {
                     $errorMsg = getSupabaseErrorMessage($deleteResult, 'Erreur lors de la suppression du compte.');
                 }
@@ -139,11 +163,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (!in_array($newType, $allowed)) {
             $errorMsg = 'Type invalide.';
         } else {
-            $updateResult = callSupabase('PATCH', "$baseUrl/users?id=eq.$userId", $apiKey, ['type' => $newType]);
-            if ($updateResult['ok']) {
-                $successMsg = 'Type mis à jour.';
-            } else {
-                $errorMsg = getSupabaseErrorMessage($updateResult, 'Erreur lors de la mise à jour.');
+            $targetUser = fetchPlatformUserById($userId, $baseUrl, $apiKey);
+            if (!$targetUser) {
+                $errorMsg = 'Compte introuvable.';
+            }
+
+            if ($errorMsg === '') {
+                $updateResult = callSupabase('PATCH', "$baseUrl/users?id=eq.$userId", $apiKey, ['type' => $newType]);
+
+                if (!$updateResult['ok']) {
+                    $errorMsg = getSupabaseErrorMessage($updateResult, 'Erreur lors de la mise à jour.');
+                }
+            }
+
+            if ($errorMsg === '' && $targetUser) {
+                $authUser = supabaseAuthAdminFindUserByEmail((string) ($targetUser['email'] ?? ''));
+
+                if ($authUser && !empty($authUser['id'])) {
+                    $authUpdate = supabaseAuthAdminUpdateUser((string) $authUser['id'], [
+                        'user_metadata' => [
+                            'username' => (string) ($targetUser['username'] ?? ''),
+                            'type' => $newType,
+                        ],
+                        'app_metadata' => [
+                            'type' => $newType,
+                            'username' => (string) ($targetUser['username'] ?? ''),
+                        ],
+                    ]);
+
+                    if (!$authUpdate['ok']) {
+                        $errorMsg = supabaseAuthErrorMessage($authUpdate, 'Le type a ete mis a jour dans la table users, mais pas dans Supabase Auth.');
+                    }
+                }
+
+                if ($errorMsg === '') {
+                    $successMsg = 'Type mis a jour dans le profil applicatif et dans Supabase Auth.';
+                }
             }
         }
     }

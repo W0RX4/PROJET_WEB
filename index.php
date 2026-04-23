@@ -60,11 +60,6 @@
         return $response;
     });
 
-    $app->get('/resend-2fa', function (Request $request, Response $response, $args) {
-        require __DIR__ . '/connection/resend_2fa.php';
-        return $response;
-    });
-
     // --- ROUTES PROTEGEES (App) ---
 
     // Route pour l'admin
@@ -91,6 +86,14 @@
 
     $app->post('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
     return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/account/security.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/account/security.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/account/security.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/account/security.php', $args);
     })->add($authMiddleware);
 
     // 3. Exécution de l'application
