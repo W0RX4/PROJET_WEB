@@ -1,7 +1,8 @@
 <?php
 require_once '../../includes/header.php';
 require_once __DIR__ . '/../../supabaseQuery/authClient.php';
- 
+require_once __DIR__ . '/../../supabaseQuery/addUserSupabase.php';
+
 if ($_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
@@ -157,6 +158,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
  
+    } elseif ($action === 'create') {
+        $newEmail = trim((string) ($_POST['new_email'] ?? ''));
+        $newUsername = trim((string) ($_POST['new_username'] ?? ''));
+        $newPassword = (string) ($_POST['new_password'] ?? '');
+        $newType = (string) ($_POST['new_type'] ?? 'etudiant');
+
+        $createResult = addUserSupabase($newEmail, $newUsername, $newPassword, $newType);
+
+        if (is_array($createResult) && isset($createResult['code']) && !isset($createResult['id'])) {
+            $errorMsg = (string) ($createResult['message'] ?? 'Création impossible.');
+        } else {
+            $successMsg = 'Compte créé avec succès dans Supabase Auth et le profil applicatif.';
+        }
+
     } elseif ($action === 'update_type' && $userId) {
         $newType = $_POST['type'] ?? '';
         $allowed = ['etudiant', 'entreprise', 'tuteur', 'jury', 'admin'];
@@ -223,14 +238,50 @@ $typesLabels = [
  
 <div class="card">
     <h2>Gestion des comptes</h2>
- 
+
     <?php if ($successMsg): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($successMsg); ?></div>
     <?php endif; ?>
     <?php if ($errorMsg): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($errorMsg); ?></div>
     <?php endif; ?>
- 
+</div>
+
+<div class="card">
+    <h3>Ajouter un compte</h3>
+    <form method="POST" class="grid-container">
+        <input type="hidden" name="action" value="create">
+        <div class="form-group">
+            <label class="form-label" for="new_username">Nom d'utilisateur</label>
+            <input class="form-control" type="text" id="new_username" name="new_username" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_email">Email</label>
+            <input class="form-control" type="email" id="new_email" name="new_email" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_password">Mot de passe initial</label>
+            <input class="form-control" type="text" id="new_password" name="new_password" required minlength="6">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_type">Niveau d'accès</label>
+            <select class="form-control" id="new_type" name="new_type">
+                <option value="etudiant">Étudiant</option>
+                <option value="entreprise">Entreprise</option>
+                <option value="tuteur">Tuteur</option>
+                <option value="jury">Jury</option>
+                <option value="admin">Administrateur</option>
+            </select>
+        </div>
+        <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button type="submit" class="btn btn-primary">Créer le compte</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Comptes existants</h3>
+
     <?php if (empty($users)): ?>
         <p>Aucun compte trouvé.</p>
     <?php else: ?>

@@ -46,18 +46,22 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
                     <li><a href="../user/mesCandidatures.php" class="nav-link">Mes Candidatures</a></li>
                     <li><a href="#" class="nav-link">Cahier de stage</a></li>
                 <?php elseif ($userType === 'entreprise'): ?>
-                    <li><a href="../entreprise/ajouterStage.php" class="nav-link">Deposer une offre</a></li>
-                    <li><a href="../entreprise/mesOffres.php" class="nav-link">Mes Offres</a></li>
+                    <li><a href="/app/entreprise/accueilEntreprise.php" class="nav-link">Deposer une offre</a></li>
+                    <li><a href="/app/entreprise/mesOffres.php" class="nav-link">Mes Offres</a></li>
+                    <li><a href="/app/entreprise/conventions.php" class="nav-link">Conventions</a></li>
                 <?php elseif ($userType === 'tuteur'): ?>
                     <li><a href="#" class="nav-link">Suivi Etudiants</a></li>
                     <li><a href="#" class="nav-link">Conventions</a></li>
                 <?php elseif ($userType === 'jury'): ?>
                     <li><a href="#" class="nav-link">Dossiers a evaluer</a></li>
                 <?php elseif ($userType === 'admin'): ?>
-                    <li><a href="../admin/gestionComptes.php" class="nav-link">Comptes</a></li>
-                    <li><a href="#" class="nav-link">Toutes les offres</a></li>
+                    <li><a href="/app/admin/gestionComptes.php" class="nav-link">Comptes</a></li>
+                    <li><a href="/app/admin/gestionOffres.php" class="nav-link">Offres</a></li>
+                    <li><a href="/app/admin/validerConventions.php" class="nav-link">Conventions</a></li>
+                    <li><a href="/app/admin/archives.php" class="nav-link">Archives</a></li>
+                    <li><a href="/app/admin/gestionFormations.php" class="nav-link">Formations</a></li>
                 <?php endif; ?>
-                <li><a href="../account/security.php" class="nav-link">Securite</a></li>
+                <li><a href="/app/account/security.php" class="nav-link">Securite</a></li>
                 <li><span class="nav-user"><?php echo htmlspecialchars($username); ?></span></li>
                 <li><a href="/logout" class="btn-logout">Deconnexion</a></li>
             </ul>
@@ -70,21 +74,25 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
         <ul class="navbar-nav">
             <li><a href="<?php echo $homeLink; ?>" class="nav-link">Accueil</a></li>
             <?php if ($userType === 'etudiant'): ?>
-                <li><a href="../user/mesCandidatures.php" class="nav-link">Mes Candidatures</a></li>
+                <li><a href="/app/user/mesCandidatures.php" class="nav-link">Mes Candidatures</a></li>
                 <li><a href="#" class="nav-link">Cahier de stage</a></li>
             <?php elseif ($userType === 'entreprise'): ?>
-                <li><a href="../entreprise/ajouterStage.php" class="nav-link">Deposer une offre</a></li>
-                <li><a href="../entreprise/mesOffres.php" class="nav-link">Mes Offres</a></li>
+                <li><a href="/app/entreprise/accueilEntreprise.php" class="nav-link">Deposer une offre</a></li>
+                <li><a href="/app/entreprise/mesOffres.php" class="nav-link">Mes Offres</a></li>
+                <li><a href="/app/entreprise/conventions.php" class="nav-link">Conventions</a></li>
             <?php elseif ($userType === 'tuteur'): ?>
                 <li><a href="#" class="nav-link">Suivi Etudiants</a></li>
                 <li><a href="#" class="nav-link">Conventions</a></li>
             <?php elseif ($userType === 'jury'): ?>
                 <li><a href="#" class="nav-link">Dossiers a evaluer</a></li>
             <?php elseif ($userType === 'admin'): ?>
-                <li><a href="../admin/gestionComptes.php" class="nav-link">Comptes</a></li>
-                <li><a href="#" class="nav-link">Toutes les offres</a></li>
+                <li><a href="/app/admin/gestionComptes.php" class="nav-link">Comptes</a></li>
+                <li><a href="/app/admin/gestionOffres.php" class="nav-link">Offres</a></li>
+                <li><a href="/app/admin/validerConventions.php" class="nav-link">Conventions</a></li>
+                <li><a href="/app/admin/archives.php" class="nav-link">Archives</a></li>
+                <li><a href="/app/admin/gestionFormations.php" class="nav-link">Formations</a></li>
             <?php endif; ?>
-            <li><a href="../account/security.php" class="nav-link">Securite</a></li>
+            <li><a href="/app/account/security.php" class="nav-link">Securite</a></li>
             <li><span class="nav-user"><?php echo htmlspecialchars($username); ?></span></li>
             <li><a href="/logout" class="btn-logout">Deconnexion</a></li>
         </ul>
