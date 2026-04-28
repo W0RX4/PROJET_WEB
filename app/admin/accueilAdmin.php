@@ -61,17 +61,11 @@
     </div>
 
     <div class="card">
-<<<<<<< HEAD
         <h3>Offres de stage</h3>
         <p style="color: var(--text-secondary);">
             <?php echo $totalStages; ?> offre(s) au total, dont <?php echo $archivedStages; ?> archivée(s).
         </p>
         <a href="/app/admin/gestionOffres.php" class="btn btn-primary mt-4">Diffuser & filtrer</a>
-=======
-        <h3>Offres de Stage</h3>
-        <p>Consultez et validez les offres déposées par les entreprises.</p>
-        <a href="/app/admin/gestionOffre.php" class="btn btn-primary mt-4">Gérer les offres</a>
->>>>>>> refs/remotes/origin/main
     </div>
 
     <div class="card">
