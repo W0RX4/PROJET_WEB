@@ -1,12 +1,13 @@
 <?php
 require_once '../../includes/header.php';
 require_once __DIR__ . '/../../supabaseQuery/authClient.php';
- 
+require_once __DIR__ . '/../../supabaseQuery/addUserSupabase.php';
+
 if ($_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
-
+ 
 require_once __DIR__ . '/../../vendor/autoload.php';
 use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
@@ -17,7 +18,7 @@ $baseUrl = rtrim($_ENV['SUPABASE_URL'], '/') . '/rest/v1';
  
 $successMsg = '';
 $errorMsg   = '';
-
+ 
 function callSupabase(string $method, string $endpoint, string $apiKey, ?array $payload = null): array
 {
     $ch = curl_init($endpoint);
@@ -26,28 +27,28 @@ function callSupabase(string $method, string $endpoint, string $apiKey, ?array $
         'Authorization: Bearer ' . $apiKey,
         'Accept: application/json',
     ];
-
+ 
     if ($payload !== null) {
         $headers[] = 'Content-Type: application/json';
     }
-
+ 
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_CUSTOMREQUEST  => $method,
         CURLOPT_HTTPHEADER     => $headers,
     ]);
-
+ 
     if ($payload !== null) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     }
-
+ 
     $response = curl_exec($ch);
     $curlError = curl_error($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
-
+ 
     $data = json_decode($response ?: '', true);
-
+ 
     return [
         'ok' => $curlError === '' && $code >= 200 && $code < 300,
         'code' => $code,
@@ -56,27 +57,27 @@ function callSupabase(string $method, string $endpoint, string $apiKey, ?array $
         'raw' => $response ?: '',
     ];
 }
-
+ 
 function getSupabaseErrorMessage(array $result, string $fallback): string
 {
     if (!empty($result['error'])) {
         return $fallback . ' (' . $result['error'] . ')';
     }
-
+ 
     if (is_array($result['data'])) {
         $details = $result['data']['message']
             ?? $result['data']['details']
             ?? $result['data']['hint']
             ?? null;
-
+ 
         if (is_string($details) && $details !== '') {
             return $fallback . ' (' . $details . ')';
         }
     }
-
+ 
     return $fallback;
 }
-
+ 
 function fetchPlatformUserById(int $userId, string $baseUrl, string $apiKey): ?array
 {
     $result = callSupabase('GET', "$baseUrl/users?id=eq.$userId&select=id,email,username,type&limit=1", $apiKey);
@@ -91,16 +92,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
  
     if ($action === 'delete' && $userId) {
         $currentUserId = (int) ($_SESSION['user_id'] ?? 0);
-
+ 
         if ($userId === $currentUserId) {
             $errorMsg = 'Vous ne pouvez pas supprimer votre propre compte.';
         } else {
             $targetUser = fetchPlatformUserById($userId, $baseUrl, $apiKey);
-
+ 
             if (!$targetUser) {
                 $errorMsg = 'Compte introuvable.';
             }
-
+ 
+            // 🔒 Bloquer la suppression d'un autre administrateur
+            if ($errorMsg === '' && ($targetUser['type'] ?? '') === 'admin') {
+                $errorMsg = 'Vous ne pouvez pas supprimer un autre administrateur.';
+            }
+ 
             // Nettoie d'abord les relations qui bloquent la suppression SQL.
             $cleanupSteps = $errorMsg === '' ? [
                 [
@@ -128,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     'message' => 'Erreur lors du nettoyage du compte.',
                 ],
             ] : [];
-
+ 
             foreach ($cleanupSteps as $step) {
                 $result = callSupabase($step['method'], $step['url'], $apiKey, $step['payload']);
                 if (!$result['ok']) {
@@ -136,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     break;
                 }
             }
-
+ 
             if ($errorMsg === '') {
                 $deleteResult = callSupabase('DELETE', "$baseUrl/users?id=eq.$userId", $apiKey);
                 if ($deleteResult['ok']) {
@@ -147,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $errorMsg = supabaseAuthErrorMessage($authDelete, 'Le profil applicatif a ete supprime, mais pas le compte Supabase Auth.');
                         }
                     }
-
+ 
                     if ($errorMsg === '') {
                         $successMsg = 'Compte supprime dans le profil applicatif et dans Supabase Auth.';
                     }
@@ -157,6 +163,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
  
+    } elseif ($action === 'create') {
+        $newEmail = trim((string) ($_POST['new_email'] ?? ''));
+        $newUsername = trim((string) ($_POST['new_username'] ?? ''));
+        $newPassword = (string) ($_POST['new_password'] ?? '');
+        $newType = (string) ($_POST['new_type'] ?? 'etudiant');
+
+        $createResult = addUserSupabase($newEmail, $newUsername, $newPassword, $newType);
+
+        if (is_array($createResult) && isset($createResult['code']) && !isset($createResult['id'])) {
+            $errorMsg = (string) ($createResult['message'] ?? 'Création impossible.');
+        } else {
+            $successMsg = 'Compte créé avec succès dans Supabase Auth et le profil applicatif.';
+        }
+
     } elseif ($action === 'update_type' && $userId) {
         $newType = $_POST['type'] ?? '';
         $allowed = ['etudiant', 'entreprise', 'tuteur', 'jury', 'admin'];
@@ -167,18 +187,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (!$targetUser) {
                 $errorMsg = 'Compte introuvable.';
             }
-
+ 
+            // 🔒 Bloquer la modification du type d'un autre administrateur
+            if ($errorMsg === '' && ($targetUser['type'] ?? '') === 'admin' && $userId !== (int) ($_SESSION['user_id'] ?? 0)) {
+                $errorMsg = 'Vous ne pouvez pas modifier le type d\'un autre administrateur.';
+            }
+ 
             if ($errorMsg === '') {
                 $updateResult = callSupabase('PATCH', "$baseUrl/users?id=eq.$userId", $apiKey, ['type' => $newType]);
-
+ 
                 if (!$updateResult['ok']) {
                     $errorMsg = getSupabaseErrorMessage($updateResult, 'Erreur lors de la mise à jour.');
                 }
             }
-
+ 
             if ($errorMsg === '' && $targetUser) {
                 $authUser = supabaseAuthAdminFindUserByEmail((string) ($targetUser['email'] ?? ''));
-
+ 
                 if ($authUser && !empty($authUser['id'])) {
                     $authUpdate = supabaseAuthAdminUpdateUser((string) $authUser['id'], [
                         'user_metadata' => [
@@ -190,12 +215,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             'username' => (string) ($targetUser['username'] ?? ''),
                         ],
                     ]);
-
+ 
                     if (!$authUpdate['ok']) {
                         $errorMsg = supabaseAuthErrorMessage($authUpdate, 'Le type a ete mis a jour dans la table users, mais pas dans Supabase Auth.');
                     }
                 }
-
+ 
                 if ($errorMsg === '') {
                     $successMsg = 'Type mis a jour dans le profil applicatif et dans Supabase Auth.';
                 }
@@ -207,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 // ── RÉCUPÉRATION DES USERS ───────────────────────────────────────────────────
 $usersResult = callSupabase('GET', "$baseUrl/users?select=id,email,username,type,created_at&order=created_at.desc", $apiKey);
 $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
-
+ 
 if (!$usersResult['ok'] && $errorMsg === '') {
     $errorMsg = getSupabaseErrorMessage($usersResult, 'Impossible de charger la liste des comptes.');
 }
@@ -223,14 +248,50 @@ $typesLabels = [
  
 <div class="card">
     <h2>Gestion des comptes</h2>
- 
+
     <?php if ($successMsg): ?>
         <div class="alert alert-success"><?php echo htmlspecialchars($successMsg); ?></div>
     <?php endif; ?>
     <?php if ($errorMsg): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($errorMsg); ?></div>
     <?php endif; ?>
- 
+</div>
+
+<div class="card">
+    <h3>Ajouter un compte</h3>
+    <form method="POST" class="grid-container">
+        <input type="hidden" name="action" value="create">
+        <div class="form-group">
+            <label class="form-label" for="new_username">Nom d'utilisateur</label>
+            <input class="form-control" type="text" id="new_username" name="new_username" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_email">Email</label>
+            <input class="form-control" type="email" id="new_email" name="new_email" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_password">Mot de passe initial</label>
+            <input class="form-control" type="text" id="new_password" name="new_password" required minlength="6">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="new_type">Niveau d'accès</label>
+            <select class="form-control" id="new_type" name="new_type">
+                <option value="etudiant">Étudiant</option>
+                <option value="entreprise">Entreprise</option>
+                <option value="tuteur">Tuteur</option>
+                <option value="jury">Jury</option>
+                <option value="admin">Administrateur</option>
+            </select>
+        </div>
+        <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button type="submit" class="btn btn-primary">Créer le compte</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h3>Comptes existants</h3>
+
     <?php if (empty($users)): ?>
         <p>Aucun compte trouvé.</p>
     <?php else: ?>
@@ -246,26 +307,33 @@ $typesLabels = [
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
-                    <?php $isSelf = (int) ($user['id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0); ?>
+                    <?php
+                        $isSelf = (int) ($user['id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0);
+                        $isOtherAdmin = ($user['type'] ?? '') === 'admin' && !$isSelf;
+                    ?>
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <td style="padding:0.75rem;"><?php echo $user['id']; ?></td>
                         <td style="padding:0.75rem;"><?php echo htmlspecialchars($user['username'] ?? '—'); ?></td>
                         <td style="padding:0.75rem;"><?php echo htmlspecialchars($user['email'] ?? '—'); ?></td>
                         <td style="padding:0.75rem;"><?php echo $typesLabels[$user['type']] ?? $user['type']; ?></td>
                         <td style="padding:0.75rem; display:flex; gap:0.5rem; align-items:center;">
-                            <form method="POST" style="display:flex; gap:0.4rem; align-items:center;">
-                                <input type="hidden" name="action" value="update_type">
-                                <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                <select name="type" class="form-control" style="width:auto; padding:0.3rem 0.5rem;">
-                                    <?php foreach ($typesLabels as $val => $label): ?>
-                                        <option value="<?php echo $val; ?>" <?php echo ($user['type'] === $val) ? 'selected' : ''; ?>>
-                                            <?php echo $label; ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                                <button type="submit" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.85rem;">Modifier</button>
-                            </form>
-                            <?php if (!$isSelf): ?>
+                            <?php if (!$isOtherAdmin): ?>
+                                <form method="POST" style="display:flex; gap:0.4rem; align-items:center;">
+                                    <input type="hidden" name="action" value="update_type">
+                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                    <select name="type" class="form-control" style="width:auto; padding:0.3rem 0.5rem;">
+                                        <?php foreach ($typesLabels as $val => $label): ?>
+                                            <option value="<?php echo $val; ?>" <?php echo ($user['type'] === $val) ? 'selected' : ''; ?>>
+                                                <?php echo $label; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <button type="submit" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.85rem;">Modifier</button>
+                                </form>
+                            <?php else: ?>
+                                <span style="color: var(--text-secondary); font-size:0.85rem; font-style:italic;">Administrateur</span>
+                            <?php endif; ?>
+                            <?php if (!$isSelf && !$isOtherAdmin): ?>
                                 <form method="POST" onsubmit="return confirm('Supprimer ce compte ?');">
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">

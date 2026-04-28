@@ -74,6 +74,24 @@
     $app->get('/app/entreprise/ajouterStage.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/entreprise/ajouterStage.php', $args);
     })->add($authMiddleware);
+    $app->post('/app/entreprise/ajouterStage.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/ajouterStage.php', $args);
+    })->add($authMiddleware);
+    $app->get('/app/entreprise/mesOffres.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/mesOffres.php', $args);
+    })->add($authMiddleware);
+    $app->get('/app/entreprise/candidatures.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/candidatures.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/entreprise/candidatures.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/candidatures.php', $args);
+    })->add($authMiddleware);
+    $app->get('/app/entreprise/conventions.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/conventions.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/entreprise/conventions.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/entreprise/conventions.php', $args);
+    })->add($authMiddleware);
 
     // Routes pour l'utilisateur (étudiant)
     $app->get('/app/user/accueilUser.php', function (Request $request, Response $response, $args) use ($renderer) {
@@ -102,6 +120,34 @@
 
     $app->post('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
     return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/admin/gestionOffres.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/gestionOffres.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/admin/gestionOffres.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/gestionOffres.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/admin/validerConventions.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/validerConventions.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/admin/validerConventions.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/validerConventions.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/admin/archives.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/archives.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/admin/archives.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/archives.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/admin/gestionFormations.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/gestionFormations.php', $args);
+    })->add($authMiddleware);
+    $app->post('/app/admin/gestionFormations.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/admin/gestionFormations.php', $args);
     })->add($authMiddleware);
 
     $app->get('/app/account/security.php', function (Request $request, Response $response, $args) use ($renderer) {
