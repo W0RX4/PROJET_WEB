@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['sta
         }
  
     } elseif ($action === 'delete') {
-        // Supprimer d'abord les candidatures liées
+        // Supprimer les candidatures liées
         $delCandidatures = supabaseRestRequest('DELETE', "$baseUrl/candidatures?stage_id=eq.$stageId", $apiKey);
         if (!$delCandidatures['ok']) {
             $errorMsg = supabaseRestErrorMessage($delCandidatures, 'Erreur lors de la suppression des candidatures liées.');
@@ -66,6 +66,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['sta
             }
         }
  
+        // Supprimer les documents liés
+        if ($errorMsg === '') {
+            $delDocuments = supabaseRestRequest('DELETE', "$baseUrl/documents?stage_id=eq.$stageId", $apiKey);
+            if (!$delDocuments['ok']) {
+                $errorMsg = supabaseRestErrorMessage($delDocuments, 'Erreur lors de la suppression des documents liés.');
+            }
+        }
+        if ($errorMsg === '') {
+                $delConventions = supabaseRestRequest('DELETE', "$baseUrl/conventions?stage_id=eq.$stageId", $apiKey);
+                if (!$delConventions['ok']) {
+                    $errorMsg = supabaseRestErrorMessage($delConventions, 'Erreur lors de la suppression des conventions liées.');
+                }
+            }
         // Supprimer le stage
         if ($errorMsg === '') {
             $result = supabaseRestRequest('DELETE', "$baseUrl/stages?id=eq.$stageId", $apiKey);
@@ -101,10 +114,10 @@ if (!$stagesResult['ok'] && $errorMsg === '') {
 }
  
 $statusLabels = [
-    'en attente' => ['label' => 'En attente',  'color' => '#f59e0b'],
-    'ouverte'    => ['label' => 'Validée',      'color' => '#10b981'],
-    'rejetée'    => ['label' => 'Rejetée',      'color' => '#ef4444'],
-    'fermée'     => ['label' => 'Fermée',       'color' => '#6b7280'],
+    'en attente' => ['label' => 'En attente', 'color' => '#f59e0b'],
+    'ouverte'    => ['label' => 'Validée',     'color' => '#10b981'],
+    'rejetée'    => ['label' => 'Rejetée',     'color' => '#ef4444'],
+    'fermée'     => ['label' => 'Fermée',      'color' => '#6b7280'],
 ];
 ?>
  
@@ -199,7 +212,7 @@ $statusLabels = [
                                         <input type="hidden" name="action" value="validate">
                                         <input type="hidden" name="stage_id" value="<?php echo (int) $stage['id']; ?>">
                                         <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.75rem; font-size:0.8rem;">
-                                            Valider
+                                        Valider
                                         </button>
                                     </form>
                                 <?php endif; ?>
@@ -209,7 +222,7 @@ $statusLabels = [
                                         <input type="hidden" name="action" value="reject">
                                         <input type="hidden" name="stage_id" value="<?php echo (int) $stage['id']; ?>">
                                         <button type="submit" class="btn btn-secondary" style="padding:0.3rem 0.75rem; font-size:0.8rem;">
-                                            Rejeter
+                                        Rejeter
                                         </button>
                                     </form>
                                 <?php endif; ?>
@@ -232,4 +245,3 @@ $statusLabels = [
 <?php endif; ?>
  
 <?php require_once '../../includes/footer.php'; ?>
- 
