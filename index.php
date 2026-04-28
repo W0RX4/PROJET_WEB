@@ -80,6 +80,22 @@
         return $renderer->render($response, '/app/user/accueilUser.php', $args);
     })->add($authMiddleware);
 
+    $app->get('/app/user/cahierStage.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/user/cahierStage.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/user/cahierStage.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/user/cahierStage.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/user/documents.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/user/documents.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/user/documents.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/user/documents.php', $args);
+    })->add($authMiddleware);
+
     $app->get('/app/admin/gestionComptes.php', function (Request $request, Response $response, $args) use ($renderer) {
     return $renderer->render($response, '/app/admin/gestionComptes.php', $args);
     })->add($authMiddleware);
@@ -94,6 +110,18 @@
 
     $app->post('/app/account/security.php', function (Request $request, Response $response, $args) use ($renderer) {
         return $renderer->render($response, '/app/account/security.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/account/profil.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/account/profil.php', $args);
+    })->add($authMiddleware);
+
+    $app->post('/app/account/profil.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/account/profil.php', $args);
+    })->add($authMiddleware);
+
+    $app->get('/app/account/annuaire.php', function (Request $request, Response $response, $args) use ($renderer) {
+        return $renderer->render($response, '/app/account/annuaire.php', $args);
     })->add($authMiddleware);
 
     // 3. Exécution de l'application

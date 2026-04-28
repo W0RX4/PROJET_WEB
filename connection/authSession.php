@@ -1,5 +1,7 @@
 <?php
 
+require_once __DIR__ . '/../includes/trace.php';
+
 if (!function_exists('stageArchiveStartSession')) {
     function stageArchiveStartSession(): void
     {
@@ -47,5 +49,7 @@ if (!function_exists('stageArchiveSetAuthenticatedSession')) {
         $_SESSION['supabase_token_expires_at'] = time() + (int) ($authSession['expires_in'] ?? 3600);
 
         unset($_SESSION['pending_supabase_auth'], $_SESSION['pending_mfa_enrollment']);
+
+        stageArchiveLogTrace('login', 'Connexion reussie');
     }
 }

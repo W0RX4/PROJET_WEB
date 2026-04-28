@@ -1,11 +1,11 @@
 <?php
     require_once __DIR__ . '/../../includes/header.php';
     require_once __DIR__ . '/../../vendor/autoload.php';
+    require_once __DIR__ . '/../../supabaseQuery/restClient.php';
+    require_once __DIR__ . '/../../includes/trace.php';
 
     use Dotenv\Dotenv;
-    use Supabase\Client\Functions;
 
-    // Load env only if not already loaded (useful since we already loaded it in index.php)
     if (!isset($_ENV['SUPABASE_URL'])) {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
         $dotenv->safeLoad();
@@ -15,31 +15,87 @@
         header('Location: /login');
         exit;
     }
+
+    stageArchiveLogPageAccess('/app/user/accueilUser.php');
+
+    $apiKey = (string) ($_ENV['SUPABASE_KEY'] ?? '');
+    $baseUrl = rtrim((string) ($_ENV['SUPABASE_URL'] ?? ''), '/') . '/rest/v1';
+
+    $filterFiliere = trim((string) ($_GET['filiere'] ?? ''));
+    $filterLocation = trim((string) ($_GET['location'] ?? ''));
+    $filterMinWeeks = (int) ($_GET['min_weeks'] ?? 0);
+    $filterKeyword = trim((string) ($_GET['q'] ?? ''));
+
+    $queryParts = ['select=*', 'order=created_at.desc'];
+
+    if ($filterFiliere !== '') {
+        $queryParts[] = 'filiere=ilike.' . rawurlencode('%' . $filterFiliere . '%');
+    }
+    if ($filterLocation !== '') {
+        $queryParts[] = 'location=ilike.' . rawurlencode('%' . $filterLocation . '%');
+    }
+    if ($filterMinWeeks > 0) {
+        $queryParts[] = 'duration_weeks=gte.' . $filterMinWeeks;
+    }
+    if ($filterKeyword !== '') {
+        $queryParts[] = 'title=ilike.' . rawurlencode('%' . $filterKeyword . '%');
+    }
+
+    $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?" . implode('&', $queryParts), $apiKey);
+    $stages = is_array($stagesResult['data']) ? $stagesResult['data'] : [];
+
+    $missionsResult = supabaseRestRequest('GET', "$baseUrl/missions?select=*", $apiKey);
+    $allMissions = is_array($missionsResult['data']) ? $missionsResult['data'] : [];
+    $missionsByStage = [];
+    foreach ($allMissions as $mission) {
+        $stageId = (int) ($mission['stage_id'] ?? 0);
+        if ($stageId > 0) {
+            $missionsByStage[$stageId][] = $mission;
+        }
+    }
+
+    if ($filterFiliere !== '' || $filterLocation !== '' || $filterMinWeeks > 0 || $filterKeyword !== '') {
+        stageArchiveLogTrace('stages_search', "filiere=$filterFiliere, location=$filterLocation, weeks>=$filterMinWeeks, q=$filterKeyword");
+    }
 ?>
 
-<div class="card">
+<div class="card mes-offres-hero">
     <h2>Bienvenue sur l'espace Étudiant, <?php echo htmlspecialchars($username); ?> !</h2>
     <p>Trouvez le stage qui vous correspond parmi la liste d'offres ci-dessous.</p>
 </div>
 
-<h3>Offres de stage disponibles</h3>
+<div class="card">
+    <h3>Rechercher une offre</h3>
+    <form method="GET">
+        <div class="grid-container" style="margin-bottom: 1rem;">
+            <div class="form-group">
+                <label class="form-label" for="q">Mot-clé (titre)</label>
+                <input type="text" id="q" name="q" class="form-control" value="<?php echo htmlspecialchars($filterKeyword); ?>" placeholder="Ex : développeur web">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="filiere">Filière</label>
+                <input type="text" id="filiere" name="filiere" class="form-control" value="<?php echo htmlspecialchars($filterFiliere); ?>" placeholder="Ex : informatique">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="location">Lieu</label>
+                <input type="text" id="location" name="location" class="form-control" value="<?php echo htmlspecialchars($filterLocation); ?>" placeholder="Ex : Paris">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="min_weeks">Durée minimale (semaines)</label>
+                <input type="number" id="min_weeks" name="min_weeks" class="form-control" min="0" value="<?php echo $filterMinWeeks > 0 ? (int) $filterMinWeeks : ''; ?>" placeholder="Ex : 8">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Filtrer les offres</button>
+        <a href="/app/user/accueilUser.php" class="btn btn-secondary">Réinitialiser</a>
+    </form>
+</div>
+
+<h3 style="margin-top: 2rem;">Offres de stage disponibles (<?php echo count($stages); ?>)</h3>
 
 <div class="grid-container mt-4">
     <?php
-        $client = new Functions($_ENV['SUPABASE_URL'] ?? '', $_ENV['SUPABASE_KEY'] ?? '');
-        $stages = $client->getAllData('stages');
-        $allMissions = $client->getAllData('missions') ?: [];
-        $missionsByStage = [];
-
-        foreach ($allMissions as $mission) {
-            $stageId = (int) ($mission['stage_id'] ?? 0);
-            if ($stageId > 0) {
-                $missionsByStage[$stageId][] = $mission;
-            }
-        }
-        
         if (empty($stages)) {
-            echo "<div class='card'><p>Aucune offre de stage n'est disponible pour le moment.</p></div>";
+            echo "<div class='card'><p>Aucune offre de stage ne correspond à votre recherche.</p></div>";
         } else {
             foreach ($stages as $stage) {
                 $stageId = (int) ($stage['id'] ?? 0);
@@ -58,6 +114,12 @@
                     <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
                         <p><?php echo htmlspecialchars($stage['location'] ?? 'Lieu non disponible'); ?></p>
                         <p>Du <?php echo htmlspecialchars($stage['start_date'] ?? 'N/A'); ?> au <?php echo htmlspecialchars($stage['end_date'] ?? 'N/A'); ?></p>
+                        <?php if (!empty($stage['filiere'])): ?>
+                            <p><strong>Filière :</strong> <?php echo htmlspecialchars($stage['filiere']); ?></p>
+                        <?php endif; ?>
+                        <?php if (!empty($stage['duration_weeks'])): ?>
+                            <p><strong>Durée :</strong> <?php echo (int) $stage['duration_weeks']; ?> semaines</p>
+                        <?php endif; ?>
                     </div>
                     <?php if (!empty($stageMissions)): ?>
                         <div style="margin-bottom: 1.25rem;">
