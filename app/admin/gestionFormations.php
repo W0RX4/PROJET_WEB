@@ -1,7 +1,9 @@
 <?php
-require_once __DIR__ . '/../../includes/header.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if ($_SESSION['type'] !== 'admin') {
+if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
@@ -124,6 +126,8 @@ $usersById = [];
 foreach ($students as $user) {
     $usersById[(int) ($user['id'] ?? 0)] = $user;
 }
+
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">

@@ -1,7 +1,9 @@
 <?php
-require_once __DIR__ . '/../../includes/header.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if ($_SESSION['type'] !== 'admin') {
+if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
@@ -88,6 +90,8 @@ foreach ((is_array($documentsResult['data']) ? $documentsResult['data'] : []) as
 }
 
 $filterStatus = trim((string) ($_GET['status'] ?? 'pending'));
+
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">

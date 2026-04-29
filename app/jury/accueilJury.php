@@ -1,9 +1,14 @@
 <?php
-    require_once '../../includes/header.php';
-    if($_SESSION['type'] !== 'jury'){
-        header('Location: ../../connection/login.php');
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'jury') {
+        header('Location: /login');
         exit;
     }
+
+    require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card">
