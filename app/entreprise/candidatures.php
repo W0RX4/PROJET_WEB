@@ -130,12 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         if ($existingConvention) {
-            $conventionSave = supabaseRestRequest(
-                'PATCH',
-                "$baseUrl/conventions?id=eq." . (int) $existingConvention['id'],
-                $apiKey,
-                ['company_validated' => true]
-            );
+            $conventionSave = ['ok' => true];
         } else {
             $conventionSave = supabaseRestRequest(
                 'POST',
@@ -144,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 [
                     'stage_id' => $stageId,
                     'student_id' => $studentId,
-                    'company_validated' => true,
+                    'company_validated' => false,
                 ]
             );
         }

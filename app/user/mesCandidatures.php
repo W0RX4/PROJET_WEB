@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 [
                     'stage_id' => $stageId,
                     'student_id' => $userId,
-                    'company_validated' => true,
+                    'company_validated' => false,
                 ]
             );
 

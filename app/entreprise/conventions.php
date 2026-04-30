@@ -195,13 +195,16 @@ require_once __DIR__ . '/../../includes/header.php';
                     <?php endif; ?>
                 </div>
 
-                <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
                     <?php if (!$companyValidated): ?>
                         <form method="POST">
                             <input type="hidden" name="action" value="validate">
                             <input type="hidden" name="convention_id" value="<?php echo (int) ($convention['id'] ?? 0); ?>">
-                            <button type="submit" class="btn btn-primary" <?php echo $documentUrl ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider la convention</button>
+                            <button type="submit" class="btn btn-primary" <?php echo $document ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider la convention</button>
                         </form>
+                        <?php if (!$document): ?>
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">L'étudiant doit d'abord déposer la convention.</span>
+                        <?php endif; ?>
                     <?php else: ?>
                         <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
                             Convention validée par votre entreprise. La décision est définitive ; le tuteur et l'administration prennent maintenant le relais.
