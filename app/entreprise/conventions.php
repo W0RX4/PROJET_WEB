@@ -81,20 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectToConventions();
     }
 
-    if ($action === 'reject') {
-        $update = supabaseRestRequest(
-            'PATCH',
-            "$baseUrl/conventions?id=eq.$conventionId",
-            $apiKey,
-            ['company_validated' => false]
-        );
-        if (!$update['ok']) {
-            $_SESSION['error'] = supabaseRestErrorMessage($update, 'Refus impossible.');
-            redirectToConventions();
-        }
-        $_SESSION['result'] = 'Validation entreprise retirée. L\'étudiant doit redéposer sa convention.';
-        redirectToConventions();
-    }
 }
 
 $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=*", $apiKey);
@@ -217,11 +203,9 @@ require_once __DIR__ . '/../../includes/header.php';
                             <button type="submit" class="btn btn-primary" <?php echo $documentUrl ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider la convention</button>
                         </form>
                     <?php else: ?>
-                        <form method="POST" onsubmit="return confirm('Retirer la validation ? L\'étudiant devra redéposer une nouvelle version.');">
-                            <input type="hidden" name="action" value="reject">
-                            <input type="hidden" name="convention_id" value="<?php echo (int) ($convention['id'] ?? 0); ?>">
-                            <button type="submit" class="btn btn-secondary">Retirer la validation</button>
-                        </form>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin: 0;">
+                            Convention validée par votre entreprise. La décision est définitive ; le tuteur et l'administration prennent maintenant le relais.
+                        </p>
                     <?php endif; ?>
                 </div>
             </div>
