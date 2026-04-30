@@ -46,7 +46,7 @@ Le jeu de donnees de demonstration :
 
 Cela permet de montrer rapidement plusieurs parcours sans devoir tout ressaisir avant la soutenance.
 
-### Offres creees par le seed
+### Offres creees pour la demo
 
 - `Developpeur Web Full Stack`
 - `Analyste Data Junior`
@@ -111,16 +111,9 @@ Ce que vous pouvez verifier :
 - depot de convention apres acceptation ;
 - possibilite de postuler pendant la presentation a une offre sans candidature existante, par exemple `Developpeur Mobile Flutter` ou `UX UI Designer Produit`.
 
-## Structure utile
-
-- [index.php](/home/cytech/Desktop/ING1/S2/DEV_WEB/PROJET_WEB/index.php) : point d'entree et routes Slim
-- [connection/login.php](/home/cytech/Desktop/ING1/S2/DEV_WEB/PROJET_WEB/connection/login.php) : page de connexion
-- [app/account/security.php](/home/cytech/Desktop/ING1/S2/DEV_WEB/PROJET_WEB/app/account/security.php) : gestion MFA
-
 ## Remarques
 
 - l'authentification et la double authentification passent par Supabase ;
 - les comptes de demo utilisent tous le meme mot de passe pour simplifier la soutenance ;
 - si vous activez la MFA sur un compte de demo, il faudra ensuite utiliser le code TOTP a chaque connexion ;
-- les comptes et donnees de demonstration peuvent etre remis a jour avec `php scripts/seed_demo.php` ;
-- les espaces `tuteur` et `jury` existent dans l'application, mais le scenario de demonstration principal repose sur les roles `admin`, `entreprise` et `etudiant`.
+- les espaces `tuteur` et `jury` existent dans l'application mais ne sont pas fonctionnel, donc le scenario de demonstration principal repose uniquement sur les roles `admin`, `entreprise` et `etudiant`.
