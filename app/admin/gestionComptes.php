@@ -111,32 +111,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
  
             // Nettoie d'abord les relations qui bloquent la suppression SQL.
-            $cleanupSteps = $errorMsg === '' ? [
-                [
-                    'method' => 'DELETE',
-                    'url' => "$baseUrl/candidatures?student_id=eq.$userId",
-                    'payload' => null,
-                    'message' => 'Erreur lors de la suppression des candidatures associées.',
-                ],
-                [
+            // Pour un etudiant, les stages attribues sont conserves et ranges dans les archives.
+            $cleanupSteps = [];
+            if ($errorMsg === '') {
+                $isStudent = ($targetUser['type'] ?? '') === 'etudiant';
+                $handoverUserId = $currentUserId > 0 ? $currentUserId : null;
+
+                $cleanupSteps[] = [
                     'method' => 'PATCH',
                     'url' => "$baseUrl/stages?student_id=eq.$userId",
-                    'payload' => ['student_id' => null],
-                    'message' => 'Erreur lors du détachement des stages de l\'étudiant.',
-                ],
-                [
-                    'method' => 'PATCH',
-                    'url' => "$baseUrl/stages?tutor_id=eq.$userId",
-                    'payload' => ['tutor_id' => null],
-                    'message' => 'Erreur lors du détachement des stages du tuteur.',
-                ],
-                [
-                    'method' => 'PATCH',
-                    'url' => "$baseUrl/users?id=eq.$userId",
-                    'payload' => ['stage_id' => null],
-                    'message' => 'Erreur lors du nettoyage du compte.',
-                ],
-            ] : [];
+                    'payload' => $isStudent ? ['student_id' => null, 'status' => 'archivée'] : ['student_id' => null],
+                    'message' => $isStudent
+                        ? 'Erreur lors de l\'archivage des stages de l\'étudiant.'
+                        : 'Erreur lors du détachement des stages de l\'utilisateur.',
+                ];
+
+                $cleanupSteps = array_merge($cleanupSteps, [
+                    [
+                        'method' => 'DELETE',
+                        'url' => "$baseUrl/candidatures?student_id=eq.$userId",
+                        'payload' => null,
+                        'message' => 'Erreur lors de la suppression des candidatures associées.',
+                    ],
+                    [
+                        'method' => 'DELETE',
+                        'url' => "$baseUrl/conventions?student_id=eq.$userId",
+                        'payload' => null,
+                        'message' => 'Erreur lors de la suppression des conventions associées.',
+                    ],
+                    [
+                        'method' => 'DELETE',
+                        'url' => "$baseUrl/formation_requests?student_id=eq.$userId",
+                        'payload' => null,
+                        'message' => 'Erreur lors de la suppression des demandes de formation associées.',
+                    ],
+                    [
+                        'method' => 'DELETE',
+                        'url' => "$baseUrl/cahier_stage?student_id=eq.$userId",
+                        'payload' => null,
+                        'message' => 'Erreur lors de la suppression du cahier de stage associé.',
+                    ],
+                    [
+                        'method' => 'DELETE',
+                        'url' => "$baseUrl/two_factor_codes?user_id=eq.$userId",
+                        'payload' => null,
+                        'message' => 'Erreur lors de la suppression des codes de double authentification.',
+                    ],
+                    [
+                        'method' => $handoverUserId ? 'PATCH' : 'DELETE',
+                        'url' => "$baseUrl/documents?user_id=eq.$userId",
+                        'payload' => $handoverUserId ? ['user_id' => $handoverUserId] : null,
+                        'message' => 'Erreur lors du rattachement des documents associés.',
+                    ],
+                    [
+                        'method' => $handoverUserId ? 'PATCH' : 'DELETE',
+                        'url' => "$baseUrl/remarques?author_id=eq.$userId",
+                        'payload' => $handoverUserId ? ['author_id' => $handoverUserId] : null,
+                        'message' => 'Erreur lors du rattachement des remarques associées.',
+                    ],
+                    [
+                        'method' => $handoverUserId ? 'PATCH' : 'DELETE',
+                        'url' => "$baseUrl/missions?company_id=eq.$userId",
+                        'payload' => $handoverUserId ? ['company_id' => $handoverUserId] : null,
+                        'message' => 'Erreur lors du rattachement des missions associées.',
+                    ],
+                    [
+                        'method' => 'PATCH',
+                        'url' => "$baseUrl/traces?user_id=eq.$userId",
+                        'payload' => ['user_id' => null],
+                        'message' => 'Erreur lors du nettoyage des traces associées.',
+                    ],
+                    [
+                        'method' => 'PATCH',
+                        'url' => "$baseUrl/stages?tutor_id=eq.$userId",
+                        'payload' => ['tutor_id' => null],
+                        'message' => 'Erreur lors du détachement des stages du tuteur.',
+                    ],
+                    [
+                        'method' => 'PATCH',
+                        'url' => "$baseUrl/stages?company_id=eq.$userId",
+                        'payload' => ['company_id' => null],
+                        'message' => 'Erreur lors du détachement des stages de l\'entreprise.',
+                    ],
+                    [
+                        'method' => 'PATCH',
+                        'url' => "$baseUrl/users?id=eq.$userId",
+                        'payload' => ['stage_id' => null],
+                        'message' => 'Erreur lors du nettoyage du compte.',
+                    ],
+                ]);
+            }
  
             foreach ($cleanupSteps as $step) {
                 $result = callSupabase($step['method'], $step['url'], $apiKey, $step['payload']);
@@ -158,7 +222,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                     }
  
                     if ($errorMsg === '') {
-                        $successMsg = 'Compte supprime dans le profil applicatif et dans Supabase Auth.';
+                        $successMsg = ($targetUser['type'] ?? '') === 'etudiant'
+                            ? 'Compte supprime. Les stages attribues a cet etudiant ont ete conserves dans les archives.'
+                            : 'Compte supprime dans le profil applicatif et dans Supabase Auth.';
                     }
                 } else {
                     $errorMsg = getSupabaseErrorMessage($deleteResult, 'Erreur lors de la suppression du compte.');

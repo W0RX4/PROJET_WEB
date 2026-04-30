@@ -171,6 +171,9 @@ require_once __DIR__ . '/../../includes/header.php';
                 $sid = (int) ($stage['id'] ?? 0);
                 $studentId = (int) ($stage['student_id'] ?? 0);
                 $student = $usersMap[$studentId] ?? null;
+                $studentLabel = $student
+                    ? ($student['username'] ?? '—') . ' (' . ($student['email'] ?? '') . ')'
+                    : 'Compte étudiant supprimé';
                 $tutor = $usersMap[(int) ($stage['tutor_id'] ?? 0)] ?? null;
                 $stageDocs = $documentsByStage[$sid] ?? [];
                 $status = (string) ($stage['status'] ?? '');
@@ -180,7 +183,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <p class="offre-company"><?php echo htmlspecialchars($stage['company'] ?? ''); ?></p>
 
                 <div class="offre-meta" style="margin-top: 0;">
-                    <p><strong>Étudiant :</strong> <?php echo htmlspecialchars($student['username'] ?? '—'); ?> (<?php echo htmlspecialchars($student['email'] ?? ''); ?>)</p>
+                    <p><strong>Étudiant :</strong> <?php echo htmlspecialchars($studentLabel); ?></p>
                     <p><strong>Tuteur :</strong> <?php echo htmlspecialchars($tutor['username'] ?? '—'); ?></p>
                     <p><strong>Filière :</strong> <?php echo htmlspecialchars($stage['filiere'] ?? '—'); ?></p>
                     <p><strong>Période :</strong> <?php echo htmlspecialchars($stage['start_date'] ?? ''); ?> → <?php echo htmlspecialchars($stage['end_date'] ?? ''); ?></p>
