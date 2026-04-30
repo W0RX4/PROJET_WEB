@@ -1,6 +1,9 @@
 <?php
-    require_once __DIR__ . '/../../includes/header.php';
-    if(!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise'){
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise') {
         header('Location: /login');
         exit;
     }
@@ -52,6 +55,8 @@
         );
         $pendingConventions = is_array($conventionsResult['data']) ? count($conventionsResult['data']) : 0;
     }
+
+    require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">

@@ -3,7 +3,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+<<<<<<< HEAD
 if (($_SESSION['type'] ?? '') !== 'admin') {
+=======
+if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
+>>>>>>> refs/remotes/origin/main
     header('Location: /login');
     exit;
 }

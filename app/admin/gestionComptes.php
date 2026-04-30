@@ -1,14 +1,17 @@
 <?php
-require_once '../../includes/header.php';
-require_once __DIR__ . '/../../supabaseQuery/authClient.php';
-require_once __DIR__ . '/../../supabaseQuery/addUserSupabase.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if ($_SESSION['type'] !== 'admin') {
+if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
- 
+
 require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../supabaseQuery/authClient.php';
+require_once __DIR__ . '/../../supabaseQuery/addUserSupabase.php';
+
 use Dotenv\Dotenv;
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../../');
 $dotenv->safeLoad();
@@ -244,8 +247,10 @@ $typesLabels = [
     'jury'       => 'Jury',
     'admin'      => 'Admin',
 ];
+
+require_once __DIR__ . '/../../includes/header.php';
 ?>
- 
+
 <div class="card">
     <h2>Gestion des comptes</h2>
 

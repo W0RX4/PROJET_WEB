@@ -1,5 +1,13 @@
 <?php
-    require_once __DIR__ . '/../../includes/header.php';
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'etudiant') {
+        header('Location: /login');
+        exit;
+    }
+
     require_once __DIR__ . '/../../vendor/autoload.php';
     require_once __DIR__ . '/../../supabaseQuery/restClient.php';
     require_once __DIR__ . '/../../includes/trace.php';
@@ -9,11 +17,6 @@
     if (!isset($_ENV['SUPABASE_URL'])) {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
         $dotenv->safeLoad();
-    }
-
-    if(!isset($_SESSION['type']) || $_SESSION['type'] !== 'etudiant'){
-        header('Location: /login');
-        exit;
     }
 
     stageArchiveLogPageAccess('/app/user/accueilUser.php');
@@ -57,6 +60,8 @@
     if ($filterFiliere !== '' || $filterLocation !== '' || $filterMinWeeks > 0 || $filterKeyword !== '') {
         stageArchiveLogTrace('stages_search', "filiere=$filterFiliere, location=$filterLocation, weeks>=$filterMinWeeks, q=$filterKeyword");
     }
+
+    require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">

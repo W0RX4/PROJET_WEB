@@ -1,59 +1,113 @@
 <?php
-session_start();
+require_once __DIR__ . '/../../vendor/autoload.php';
+require_once __DIR__ . '/../../supabaseQuery/restClient.php';
+require_once __DIR__ . '/../../supabaseQuery/storageClient.php';
+require_once __DIR__ . '/../../includes/trace.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../../connection/login.php');
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if (!isset($_SESSION['user_id']) || ($_SESSION['type'] ?? '') !== 'etudiant') {
+    header('Location: /login');
     exit;
 }
 
-require_once __DIR__ . '/../../vendor/autoload.php';
-require_once __DIR__ . '/../../supabaseQuery/storageClient.php';
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: accueilUser.php');
+    exit;
+}
 
 use Dotenv\Dotenv;
-use Supabase\Client\Functions;
 
-$dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
-$dotenv->safeLoad();
-
-$supabaseUrl = $_ENV['SUPABASE_URL'] ?? '';
-$supabaseKey = $_ENV['SUPABASE_KEY'] ?? '';
-
-// 1. Upload des fichiers
-$cvPath = null;
-if (isset($_FILES['CV'])) {
-    $cvUpload = uploadFileToSupabaseBucket($_FILES['CV'], $_SESSION['email'], 'CV', $supabaseUrl, $supabaseKey);
-    $cvPath = $cvUpload['path'] ?? null;
+if (!isset($_ENV['SUPABASE_URL'])) {
+    $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
+    $dotenv->safeLoad();
 }
 
-$letterPath = null;
-if (isset($_FILES['cover_letter'])) {
-    $letterUpload = uploadFileToSupabaseBucket($_FILES['cover_letter'], $_SESSION['email'], 'LM', $supabaseUrl, $supabaseKey);
-    $letterPath = $letterUpload['path'] ?? null;
+$supabaseUrl = (string) ($_ENV['SUPABASE_URL'] ?? '');
+$supabaseKey = (string) ($_ENV['SUPABASE_KEY'] ?? '');
+$baseUrl = rtrim($supabaseUrl, '/') . '/rest/v1';
+
+$studentId = (int) ($_SESSION['user_id'] ?? 0);
+$studentEmail = (string) ($_SESSION['email'] ?? '');
+$stageId = (int) ($_POST['stage_id'] ?? 0);
+
+if ($stageId <= 0) {
+    $_SESSION['error'] = 'Offre de stage invalide.';
+    header('Location: accueilUser.php');
+    exit;
 }
 
-if (!$cvPath || !$letterPath) {
-    die("Erreur lors de l'upload des fichiers (format non géré, taille trop grande ou bucket introuvable).");
+$stageCheck = supabaseRestRequest(
+    'GET',
+    "$baseUrl/stages?id=eq.$stageId&select=id,status&limit=1",
+    $supabaseKey
+);
+$stage = is_array($stageCheck['data']) && isset($stageCheck['data'][0]) ? $stageCheck['data'][0] : null;
+
+if (!$stageCheck['ok'] || !$stage) {
+    $_SESSION['error'] = "Cette offre de stage n'existe plus.";
+    header('Location: accueilUser.php');
+    exit;
 }
 
-// 2. Enregistrement des données en Base de Données
-$client = new Functions($supabaseUrl, $supabaseKey);
+$existingCheck = supabaseRestRequest(
+    'GET',
+    "$baseUrl/candidatures?stage_id=eq.$stageId&student_id=eq.$studentId&select=id&limit=1",
+    $supabaseKey
+);
+if (is_array($existingCheck['data']) && !empty($existingCheck['data'])) {
+    $_SESSION['error'] = "Vous avez déjà postulé à cette offre.";
+    header('Location: mesCandidatures.php');
+    exit;
+}
 
-$newCandidature = [
-    'stage_id' => (int)$_POST['stage_id'],
-    // Attention: student_id nécessite que l'étudiant se reconnecte pour avoir $_SESSION['user_id']
-    'student_id' => $_SESSION['user_id'] ?? 0, 
-    'cv_url' => $cvPath, 
-    'cover_letter_url' => $letterPath
+if (!isset($_FILES['CV']) || ($_FILES['CV']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    $_SESSION['error'] = "CV manquant ou invalide.";
+    header('Location: postuler.php?stage_id=' . $stageId);
+    exit;
+}
+
+if (!isset($_FILES['cover_letter']) || ($_FILES['cover_letter']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    $_SESSION['error'] = "Lettre de motivation manquante ou invalide.";
+    header('Location: postuler.php?stage_id=' . $stageId);
+    exit;
+}
+
+$cvUpload = uploadFileToSupabaseBucket($_FILES['CV'], $studentEmail, 'CV', $supabaseUrl, $supabaseKey);
+$letterUpload = uploadFileToSupabaseBucket($_FILES['cover_letter'], $studentEmail, 'LM', $supabaseUrl, $supabaseKey);
+
+if ($cvUpload === null || $letterUpload === null) {
+    $_SESSION['error'] = "Erreur lors de l'upload des fichiers (format non géré, taille trop grande ou bucket introuvable).";
+    header('Location: postuler.php?stage_id=' . $stageId);
+    exit;
+}
+
+$payload = [
+    'stage_id' => $stageId,
+    'student_id' => $studentId,
+    'cv_url' => $cvUpload['path'],
+    'cover_letter_url' => $letterUpload['path'],
+    'status' => 'en attente',
 ];
 
-// Vérifie que la table s'appelle bien "candidatures" côté Supabase Database
-$insertResult = $client->postData('candidatures', $newCandidature);
+$insertResult = supabaseRestRequest(
+    'POST',
+    "$baseUrl/candidatures",
+    $supabaseKey,
+    $payload,
+    ['Prefer: return=representation']
+);
 
-$resultData = json_decode($insertResult, true);
-if (isset($resultData['code'])) {
-    die("Erreur base de données Supabase (" . $resultData['code'] . ") : " . $resultData['message']);
+if (!$insertResult['ok']) {
+    $_SESSION['error'] = supabaseRestErrorMessage($insertResult, "Erreur lors de l'enregistrement de votre candidature.");
+    header('Location: postuler.php?stage_id=' . $stageId);
+    exit;
 }
 
-// Rediriger vers l'accueil étudiant une fois terminé
-header('Location: accueilUser.php');
+stageArchiveLogTrace('candidature_create', "stage=$stageId");
+
+$_SESSION['result'] = 'Candidature envoyée avec succès.';
+header('Location: mesCandidatures.php');
 exit;

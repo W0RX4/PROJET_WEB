@@ -1,8 +1,10 @@
 <?php
-    require_once '../../includes/header.php';
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
-    if($_SESSION['type'] !== 'entreprise'){
-        header('Location: ../../connection/login.php');
+    if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise') {
+        header('Location: /login');
         exit;
     }
 
@@ -32,6 +34,8 @@
             }
         }
     }
+
+    require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">

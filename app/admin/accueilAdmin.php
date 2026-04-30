@@ -1,7 +1,10 @@
 <?php
-    require_once '../../includes/header.php';
-    if($_SESSION['type'] !== 'admin'){
-        header('Location: ../../connection/login.php');
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
+        header('Location: /login');
         exit;
     }
 
@@ -44,6 +47,8 @@
 
     $conventionsResult = supabaseRestRequest('GET', "$baseUrl/conventions?admin_validated=is.false&select=id", $apiKey);
     $pendingConventions = is_array($conventionsResult['data']) ? count($conventionsResult['data']) : 0;
+
+    require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">
