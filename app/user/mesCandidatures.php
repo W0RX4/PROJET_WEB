@@ -34,7 +34,7 @@ function studentBadgeClass(string $status): string
 {
     $normalized = strtolower(trim($status));
 
-    if (in_array($normalized, ['acceptée par l\'étudiant', 'convention envoyée', 'en cours'], true)) {
+    if (in_array($normalized, ['proposition envoyée', 'acceptée par l\'étudiant', 'convention envoyée', 'en cours'], true)) {
         return 'badge badge-valid';
     }
 
@@ -43,6 +43,26 @@ function studentBadgeClass(string $status): string
     }
 
     return 'badge badge-pending';
+}
+
+function studentStatusLabel(string $status): string
+{
+    $normalized = strtolower(trim($status));
+
+    if ($normalized === 'proposition envoyée') {
+        return 'Accepté(e) par l\'entreprise';
+    }
+    if ($normalized === 'acceptée par l\'étudiant') {
+        return 'Stage confirmé';
+    }
+    if ($normalized === 'convention envoyée') {
+        return 'Convention déposée';
+    }
+    if (in_array($normalized, ['refusée par l\'étudiant', 'refusee par l\'etudiant'], true)) {
+        return 'Proposition refusée';
+    }
+
+    return $status;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -279,6 +299,16 @@ foreach ($documents as $document) {
     $documentsByStage[(int) ($document['stage_id'] ?? 0)][] = $document;
 }
 
+$conventionsResult = supabaseRestRequest(
+    'GET',
+    "$baseUrl/conventions?student_id=eq.$userId&select=*",
+    $apiKey
+);
+$conventionsByStage = [];
+foreach ((is_array($conventionsResult['data']) ? $conventionsResult['data'] : []) as $conv) {
+    $conventionsByStage[(int) ($conv['stage_id'] ?? 0)] = $conv;
+}
+
 require_once '../../includes/header.php';
 ?>
 
@@ -323,13 +353,37 @@ require_once '../../includes/header.php';
                     }
                 }
                 $conventionUrl = $conventionDocument ? getSupabaseSignedUrl($conventionDocument['file_path'] ?? '', $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) : null;
+                $convention = $conventionsByStage[$stageId] ?? null;
+                $companyValid = $convention ? !empty($convention['company_validated']) : false;
+                $tutorValid = $convention ? !empty($convention['tutor_validated']) : false;
+                $adminValid = $convention ? !empty($convention['admin_validated']) : false;
             ?>
             <div class="card offre-card">
                 <h3 class="offre-title"><?php echo htmlspecialchars($stageTitle); ?></h3>
                 <p class="offre-company"><?php echo htmlspecialchars($stageCompany); ?></p>
                 <div class="offre-meta" style="margin-top: 0;">
-                    <p><strong>Statut :</strong> <span class="<?php echo htmlspecialchars(studentBadgeClass($status)); ?>"><?php echo htmlspecialchars($status); ?></span></p>
+                    <p><strong>Statut :</strong> <span class="<?php echo htmlspecialchars(studentBadgeClass($status)); ?>"><?php echo htmlspecialchars(studentStatusLabel($status)); ?></span></p>
                 </div>
+
+                <?php if ($convention): ?>
+                    <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--gradient-subtle); border-radius: var(--border-radius-sm); border: 1px solid rgba(139, 92, 246, 0.1);">
+                        <p style="font-weight: 600; margin-bottom: 0.5rem; color: var(--text-primary);">Validation de la convention</p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <span class="badge <?php echo $companyValid ? 'badge-valid' : 'badge-pending'; ?>">Entreprise : <?php echo $companyValid ? 'validée' : 'en attente'; ?></span>
+                            <span class="badge <?php echo $tutorValid ? 'badge-valid' : 'badge-pending'; ?>">Tuteur : <?php echo $tutorValid ? 'validée' : 'en attente'; ?></span>
+                            <span class="badge <?php echo $adminValid ? 'badge-valid' : 'badge-pending'; ?>">Admin : <?php echo $adminValid ? 'validée' : 'en attente'; ?></span>
+                        </div>
+                        <?php if ($companyValid && $tutorValid && $adminValid): ?>
+                            <p style="margin-top: 0.6rem; margin-bottom: 0; color: var(--success-color); font-weight: 600;">Votre convention est entièrement validée !</p>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($status === 'proposition envoyée'): ?>
+                    <div class="alert alert-success" style="margin-top: 1rem;">
+                        <strong>Bonne nouvelle !</strong> L'entreprise vous a accepté(e) pour ce stage. Confirmez votre acceptation ci-dessous pour lancer la convention.
+                    </div>
+                <?php endif; ?>
 
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
                     <?php if ($cvUrl): ?>
@@ -345,7 +399,7 @@ require_once '../../includes/header.php';
 
                 <?php if ($status === 'proposition envoyée'): ?>
                     <div style="margin-top: 1.25rem;">
-                        <p style="margin-bottom: 0.75rem;">Cette entreprise vous propose le stage. Voulez-vous l’accepter ?</p>
+                        <p style="margin-bottom: 0.75rem;">Voulez-vous accepter cette proposition de stage ?</p>
                         <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                             <form method="POST">
                                 <input type="hidden" name="action" value="accept_stage">

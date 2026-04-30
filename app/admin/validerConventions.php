@@ -173,13 +173,19 @@ foreach ($conventions as $convention) {
                     <?php endif; ?>
                 </div>
 
-                <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem; flex-wrap: wrap;">
+                <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
                     <?php if (!$adminValidated): ?>
+                        <?php $canValidate = $doc !== null && $companyValidated; ?>
                         <form method="POST">
                             <input type="hidden" name="action" value="validate_admin">
                             <input type="hidden" name="convention_id" value="<?php echo (int) ($convention['id'] ?? 0); ?>">
-                            <button type="submit" class="btn btn-primary" <?php echo $documentUrl && $companyValidated ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider en tant qu'admin</button>
+                            <button type="submit" class="btn btn-primary" <?php echo $canValidate ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider en tant qu'admin</button>
                         </form>
+                        <?php if (!$doc): ?>
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">L'étudiant doit d'abord déposer la convention.</span>
+                        <?php elseif (!$companyValidated): ?>
+                            <span style="color: var(--text-secondary); font-size: 0.85rem;">L'entreprise doit d'abord valider.</span>
+                        <?php endif; ?>
                     <?php else: ?>
                         <form method="POST" onsubmit="return confirm('Retirer la validation administrative ?');">
                             <input type="hidden" name="action" value="unvalidate_admin">
