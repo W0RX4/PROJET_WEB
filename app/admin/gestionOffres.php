@@ -1,7 +1,9 @@
 <?php
-require_once __DIR__ . '/../../includes/header.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-if ($_SESSION['type'] !== 'admin') {
+if (($_SESSION['type'] ?? '') !== 'admin') {
     header('Location: /login');
     exit;
 }
@@ -144,6 +146,8 @@ foreach ($allStages as $stage) {
 
     $filteredStages[] = $stage;
 }
+
+require_once __DIR__ . '/../../includes/header.php';
 ?>
 
 <div class="card mes-offres-hero">
