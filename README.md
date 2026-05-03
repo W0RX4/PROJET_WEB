@@ -43,6 +43,9 @@ Le jeu de donnees de demonstration :
 - une candidature avec statut `refusée par l'étudiant`, utile pour montrer l'historique ;
 - une convention de stage preparee cote entreprise pour la proposition envoyee ;
 - une remarque de suivi.
+- dix dossiers de stage archives, avec documents de convention, rapport et fiche d'evaluation ;
+- dix demandes de stage en attente, avec CV et lettre de motivation ;
+- dix stages termines et entierement valides, prets a etre consultes ou archives par l'admin.
 
 Cela permet de montrer rapidement plusieurs parcours sans devoir tout ressaisir avant la soutenance.
 
