@@ -136,7 +136,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
             <div class="form-group">
                 <label class="form-label" for="friendly_name">Nom du facteur</label>
-                <input type="text" id="friendly_name" class="form-control" value="StageArchive">
+                <input type="text" id="friendly_name" class="form-control" value="Portfolium">
             </div>
             <button type="button" class="btn btn-primary" id="start-totp-enrollment">Generer un QR code</button>
 
@@ -246,7 +246,7 @@ require_once __DIR__ . '/../../includes/header.php';
         clearError();
 
         try {
-            const friendlyName = document.getElementById('friendly_name').value || 'StageArchive';
+            const friendlyName = document.getElementById('friendly_name').value || 'Portfolium';
             const result = await authFetch('/auth/v1/factors', {
                 factor_type: 'totp',
                 friendly_name: friendlyName

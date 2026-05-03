@@ -31,7 +31,7 @@ $factorLabel = $factorType === 'phone' ? 'telephone' : 'application d authentifi
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verification 2FA - StageArchive</title>
+    <title>Verification 2FA - Portfolium</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../public/css/style.css">
 </head>
@@ -39,7 +39,7 @@ $factorLabel = $factorType === 'phone' ? 'telephone' : 'application d authentifi
 
     <div class="auth-wrapper">
         <div class="auth-card">
-            <h1 class="auth-title">StageArchive</h1>
+            <h1 class="auth-title">Portfolium</h1>
             <h2 class="text-center mb-4" style="color: var(--text-secondary); font-weight: 500; font-size: 1rem;">Verification MFA Supabase</h2>
 
             <?php if (isset($_SESSION['error'])): ?>
