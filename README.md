@@ -8,6 +8,10 @@ Pour tester directement le site en ligne :
 
 `https://portfolium.fr/`
 
+## Acces rapide
+
+Le rapport est présent sur le repo à ce lien : https://github.com/W0RX4/PROJET_WEB/blob/b3ac10d1daa06a23fda8cdc9a58abd733ef39414/Rapport_Groupe4.pdf
+
 ## Connexion
 
 Depuis la page d'accueil, vous pouvez :
