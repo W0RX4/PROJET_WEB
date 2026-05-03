@@ -1,5 +1,5 @@
 -- Schema synchronise avec les tables exposees par Supabase
--- Verification effectuee le 23/04/2026 via /rest/v1/ OpenAPI
+-- Verification effectuee le 03/05/2026 via /rest/v1/ OpenAPI
 
 DO $$
 BEGIN
@@ -20,6 +20,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     type user_type NOT NULL,
     stage_id INTEGER,
+    status VARCHAR(50) DEFAULT 'active',
     admin_pending BOOLEAN DEFAULT FALSE
 );
 

@@ -1,6 +1,0 @@
-getAllData('table')SELECT *
-getSingleData('table', $query)SELECT col
-postData('table', $data)INSERT
-updateData('table', $id, $data)UPDATE
-deleteData('table', $id)DELETE
-filter('table', $id)WHERE id = $id

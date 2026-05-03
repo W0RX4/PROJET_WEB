@@ -1,1 +1,0 @@
-composer require vlucas/phpdotenv supabase/supabase-php slim/slim slim/psr7 slim/php-view
