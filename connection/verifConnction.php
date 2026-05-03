@@ -29,6 +29,16 @@ function stageArchiveFinalizeLoginFromAuthResult(array $authResult): void
     }
 
     $profile = $profileResult['profile'];
+
+    if (!empty($profile['admin_pending'])) {
+        $_SESSION['error'] = 'Votre compte administrateur est en attente de validation. Un administrateur existant doit l\'approuver avant que vous puissiez vous connecter.';
+        if (!empty($authResult['data']['access_token'])) {
+            supabaseAuthLogout((string) $authResult['data']['access_token']);
+        }
+        header('Location: /login');
+        exit;
+    }
+
     $authUserId = (string) ($authUser['id'] ?? '');
     $factorsResult = $authUserId !== '' ? supabaseAuthAdminListUserFactors($authUserId) : ['ok' => true, 'data' => []];
 

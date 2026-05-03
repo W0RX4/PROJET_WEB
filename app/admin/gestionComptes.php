@@ -232,6 +232,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
  
+    } elseif ($action === 'approve_admin' && $userId) {
+        $targetUser = fetchPlatformUserById($userId, $baseUrl, $apiKey);
+        if (!$targetUser) {
+            $errorMsg = 'Compte introuvable.';
+        } elseif (($targetUser['type'] ?? '') !== 'admin') {
+            $errorMsg = 'Ce compte n\'est pas une demande administrateur.';
+        } else {
+            $updateResult = callSupabase('PATCH', "$baseUrl/users?id=eq.$userId", $apiKey, ['admin_pending' => false]);
+            if (!$updateResult['ok']) {
+                $errorMsg = getSupabaseErrorMessage($updateResult, 'Erreur lors de la validation du compte administrateur.');
+            } else {
+                $successMsg = 'Compte administrateur valide. L\'utilisateur peut maintenant se connecter.';
+            }
+        }
+
+    } elseif ($action === 'reject_admin' && $userId) {
+        $targetUser = fetchPlatformUserById($userId, $baseUrl, $apiKey);
+        if (!$targetUser) {
+            $errorMsg = 'Compte introuvable.';
+        } elseif (($targetUser['type'] ?? '') !== 'admin') {
+            $errorMsg = 'Ce compte n\'est pas une demande administrateur.';
+        } else {
+            $deleteResult = callSupabase('DELETE', "$baseUrl/users?id=eq.$userId", $apiKey);
+            if (!$deleteResult['ok']) {
+                $errorMsg = getSupabaseErrorMessage($deleteResult, 'Erreur lors du rejet de la demande.');
+            } else {
+                $authUser = supabaseAuthAdminFindUserByEmail((string) ($targetUser['email'] ?? ''));
+                if ($authUser && !empty($authUser['id'])) {
+                    supabaseAuthAdminDeleteUser((string) $authUser['id']);
+                }
+                $successMsg = 'Demande de compte administrateur rejetee et supprimee.';
+            }
+        }
+
     } elseif ($action === 'create') {
         $newEmail = trim((string) ($_POST['new_email'] ?? ''));
         $newUsername = trim((string) ($_POST['new_username'] ?? ''));
@@ -299,8 +333,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
  
 // ── RÉCUPÉRATION DES USERS ───────────────────────────────────────────────────
-$usersResult = callSupabase('GET', "$baseUrl/users?select=id,email,username,type,created_at&order=created_at.desc", $apiKey);
+$usersResult = callSupabase('GET', "$baseUrl/users?select=id,email,username,type,created_at,admin_pending&order=created_at.desc", $apiKey);
 $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
+
+$pendingAdmins = [];
+$activeUsers = [];
+foreach ($users as $u) {
+    if (!empty($u['admin_pending'])) {
+        $pendingAdmins[] = $u;
+    } else {
+        $activeUsers[] = $u;
+    }
+}
  
 if (!$usersResult['ok'] && $errorMsg === '') {
     $errorMsg = getSupabaseErrorMessage($usersResult, 'Impossible de charger la liste des comptes.');
@@ -360,10 +404,48 @@ require_once __DIR__ . '/../../includes/header.php';
     </form>
 </div>
 
+<?php if (!empty($pendingAdmins)): ?>
+<div class="card" style="border: 2px solid var(--accent-color);">
+    <h3>Demandes de compte administrateur (<?php echo count($pendingAdmins); ?>)</h3>
+    <p style="color: var(--text-secondary);">Ces utilisateurs se sont inscrits en tant qu'administrateur. Validez ou rejetez leur demande.</p>
+    <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+        <thead>
+            <tr style="border-bottom:2px solid var(--border-color); text-align:left;">
+                <th style="padding:0.75rem;">Nom d'utilisateur</th>
+                <th style="padding:0.75rem;">Email</th>
+                <th style="padding:0.75rem;">Demande le</th>
+                <th style="padding:0.75rem;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($pendingAdmins as $pending): ?>
+                <tr style="border-bottom:1px solid var(--border-color);">
+                    <td style="padding:0.75rem;"><?php echo htmlspecialchars($pending['username'] ?? '—'); ?></td>
+                    <td style="padding:0.75rem;"><?php echo htmlspecialchars($pending['email'] ?? '—'); ?></td>
+                    <td style="padding:0.75rem;"><?php echo htmlspecialchars(substr((string) ($pending['created_at'] ?? ''), 0, 10)); ?></td>
+                    <td style="padding:0.75rem; display:flex; gap:0.5rem;">
+                        <form method="POST" onsubmit="return confirm('Valider ce compte administrateur ?');">
+                            <input type="hidden" name="action" value="approve_admin">
+                            <input type="hidden" name="user_id" value="<?php echo (int) ($pending['id'] ?? 0); ?>">
+                            <button type="submit" class="btn btn-primary" style="padding:0.3rem 0.75rem; font-size:0.85rem;">Valider</button>
+                        </form>
+                        <form method="POST" onsubmit="return confirm('Rejeter et supprimer cette demande ?');">
+                            <input type="hidden" name="action" value="reject_admin">
+                            <input type="hidden" name="user_id" value="<?php echo (int) ($pending['id'] ?? 0); ?>">
+                            <button type="submit" class="btn" style="padding:0.3rem 0.75rem; font-size:0.85rem; background:var(--danger-color); color:white;">Rejeter</button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>
+<?php endif; ?>
+
 <div class="card">
     <h3>Comptes existants</h3>
 
-    <?php if (empty($users)): ?>
+    <?php if (empty($activeUsers)): ?>
         <p>Aucun compte trouvé.</p>
     <?php else: ?>
         <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
@@ -377,7 +459,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($users as $user): ?>
+                <?php foreach ($activeUsers as $user): ?>
                     <?php
                         $isSelf = (int) ($user['id'] ?? 0) === (int) ($_SESSION['user_id'] ?? 0);
                         $isOtherAdmin = ($user['type'] ?? '') === 'admin' && !$isSelf;

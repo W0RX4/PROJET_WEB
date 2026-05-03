@@ -21,7 +21,7 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StageArchive - <?php echo ucfirst($userType); ?></title>
+    <title>Portfolium - <?php echo ucfirst($userType); ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../public/css/style.css">
 </head>
@@ -30,7 +30,7 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
 <div class="app-container">
     <?php if ($userType): ?>
     <header class="navbar">
-        <a href="<?php echo $homeLink; ?>" class="navbar-brand">StageArchive</a>
+        <a href="<?php echo $homeLink; ?>" class="navbar-brand">Portfolium</a>
 
         <button class="hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
             <span class="hamburger-line"></span>

@@ -1,0 +1,23 @@
+# Route les requêtes Slim via index.php quand le chemin demandé
+# ne correspond pas à un fichier ou dossier réel.
+RewriteEngine On
+
+# Bloquer l'accès direct aux fichiers sensibles
+RewriteRule ^\.env - [F,L]
+RewriteRule ^composer\.(json|lock)$ - [F,L]
+RewriteRule ^database\.sql$ - [F,L]
+RewriteRule ^(tache|fonction|commande)\.txt$ - [F,L]
+RewriteRule ^vendor/ - [F,L]
+
+# Si le fichier ou dossier existe, le servir directement
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Sinon, router via Slim
+RewriteRule ^ index.php [QSA,L]
+
+# Activer les sessions PHP
+<IfModule mod_php.c>
+    php_flag session.use_cookies 1
+</IfModule>

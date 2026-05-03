@@ -19,7 +19,8 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     type user_type NOT NULL,
-    stage_id INTEGER
+    stage_id INTEGER,
+    admin_pending BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE stages (
