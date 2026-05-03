@@ -35,18 +35,33 @@
         }
     }
 
-    $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=id,status", $apiKey);
+    $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=id,status,end_date,student_id", $apiKey);
     $stages = is_array($stagesResult['data']) ? $stagesResult['data'] : [];
     $totalStages = count($stages);
     $archivedStages = 0;
+    $finishedStages = 0;
+    $today = date('Y-m-d');
     foreach ($stages as $s) {
-        if (($s['status'] ?? '') === 'archivée') {
+        $status = (string) ($s['status'] ?? '');
+        $endDate = (string) ($s['end_date'] ?? '');
+        $hasStudent = (int) ($s['student_id'] ?? 0) > 0;
+
+        if ($status === 'archivée') {
             $archivedStages++;
+        }
+        if ($status !== 'archivée' && $hasStudent && (($endDate !== '' && $endDate < $today) || $status === 'fermée')) {
+            $finishedStages++;
         }
     }
 
     $conventionsResult = supabaseRestRequest('GET', "$baseUrl/conventions?admin_validated=is.false&select=id", $apiKey);
     $pendingConventions = is_array($conventionsResult['data']) ? count($conventionsResult['data']) : 0;
+
+    $validatedConventionsResult = supabaseRestRequest('GET', "$baseUrl/conventions?company_validated=is.true&tutor_validated=is.true&admin_validated=is.true&select=id", $apiKey);
+    $validatedConventions = is_array($validatedConventionsResult['data']) ? count($validatedConventionsResult['data']) : 0;
+
+    $pendingApplicationsResult = supabaseRestRequest('GET', "$baseUrl/candidatures?status=eq." . rawurlencode('en attente') . "&select=id", $apiKey);
+    $pendingApplications = is_array($pendingApplicationsResult['data']) ? count($pendingApplicationsResult['data']) : 0;
 
     require_once __DIR__ . '/../../includes/header.php';
 ?>
@@ -68,7 +83,7 @@
     <div class="card">
         <h3>Offres de stage</h3>
         <p style="color: var(--text-secondary);">
-            <?php echo $totalStages; ?> offre(s) au total, dont <?php echo $archivedStages; ?> archivée(s).
+            <?php echo $totalStages; ?> offre(s) au total, dont <?php echo $archivedStages; ?> archivée(s) et <?php echo $finishedStages; ?> terminée(s) à archiver.
         </p>
         <a href="/app/admin/gestionOffres.php" class="btn btn-primary mt-4">Diffuser & filtrer</a>
     </div>
@@ -76,7 +91,7 @@
     <div class="card">
         <h3>Conventions à valider</h3>
         <p style="color: var(--text-secondary);">
-            <?php echo $pendingConventions; ?> convention(s) en attente de validation administrative.
+            <?php echo $pendingConventions; ?> convention(s) en attente de validation administrative, <?php echo $validatedConventions; ?> entièrement validée(s).
         </p>
         <a href="/app/admin/validerConventions.php" class="btn btn-primary mt-4">Valider les conventions</a>
     </div>
@@ -100,7 +115,7 @@
     <div class="card">
         <h3>Suivi global des stages</h3>
         <p style="color: var(--text-secondary);">
-            Vue centralisée des offres, candidatures et conventions sur la plateforme.
+            <?php echo $pendingApplications; ?> candidature(s) en attente, avec une vue centralisée des offres, candidatures et conventions.
         </p>
         <a href="/app/admin/gestionOffres.php" class="btn btn-secondary mt-4">Suivi des stages</a>
     </div>
