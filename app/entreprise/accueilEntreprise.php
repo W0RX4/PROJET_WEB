@@ -1,16 +1,20 @@
 <?php
+// Fichier qui affiche le tableau de bord entreprise.
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
+    // On verifie que l utilisateur a le droit d acceder a cette page.
     if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise') {
         header('Location: /login');
         exit;
     }
 
+    // On charge les fichiers necessaires.
     require_once __DIR__ . '/../../vendor/autoload.php';
     require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 
+    // On importe les classes utilisees dans ce fichier.
     use Dotenv\Dotenv;
 
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
@@ -21,12 +25,17 @@
     $companyId = (int) ($_SESSION['user_id'] ?? 0);
     $companyName = (string) ($_SESSION['username'] ?? '');
 
+    // On appelle Supabase pour lire ou modifier les donnees.
     $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=*", $apiKey);
+    // On prepare les donnees utilisees dans ce bloc.
     $mesStages = [];
+    // On verifie cette condition.
     if (is_array($stagesResult['data'])) {
+        // On parcourt chaque element de la liste.
         foreach ($stagesResult['data'] as $stage) {
             $matchesCompanyId = $companyId > 0 && (int) ($stage['company_id'] ?? 0) === $companyId;
             $matchesCompanyName = isset($stage['company']) && (string) $stage['company'] === $companyName;
+            // On verifie cette condition.
             if ($matchesCompanyId || $matchesCompanyName) {
                 $mesStages[] = $stage;
             }
@@ -39,8 +48,10 @@
     $totalCandidatures = 0;
     $pendingConventions = 0;
 
+    // On verifie cette condition.
     if (!empty($stageIds)) {
         $idList = implode(',', $stageIds);
+        // On appelle Supabase pour lire ou modifier les donnees.
         $candidaturesResult = supabaseRestRequest(
             'GET',
             "$baseUrl/candidatures?stage_id=in.($idList)&select=id",
@@ -48,6 +59,7 @@
         );
         $totalCandidatures = is_array($candidaturesResult['data']) ? count($candidaturesResult['data']) : 0;
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $conventionsResult = supabaseRestRequest(
             'GET',
             "$baseUrl/conventions?stage_id=in.($idList)&company_validated=is.false&select=id",
@@ -56,6 +68,7 @@
         $pendingConventions = is_array($conventionsResult['data']) ? count($conventionsResult['data']) : 0;
     }
 
+    // On charge les fichiers necessaires.
     require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -64,6 +77,7 @@
     <p>Gérez vos offres de stage, vos candidats et vos conventions depuis un seul espace.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success">
         <?php echo htmlspecialchars($_SESSION['result']); ?>
@@ -71,6 +85,7 @@
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error">
         <?php echo htmlspecialchars($_SESSION['error']); ?>
@@ -156,4 +171,5 @@
     </form>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

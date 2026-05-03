@@ -1,10 +1,14 @@
 <?php
+// Fichier qui gere la securite du compte et la MFA.
 require_once __DIR__ . '/../../connection/authSession.php';
 require_once __DIR__ . '/../../supabaseQuery/authClient.php';
 
+// On ouvre la session de l application.
 stageArchiveStartSession();
+// On charge la configuration Supabase Auth.
 supabaseAuthEnsureEnvLoaded();
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login');
     exit;
@@ -17,15 +21,18 @@ $supabaseUrl = rtrim((string) ($_ENV['SUPABASE_URL'] ?? ''), '/');
 $supabaseAnonKey = (string) ($_ENV['SUPABASE_ANON_KEY'] ?? '');
 $canManageTotpInBrowser = $supabaseUrl !== '' && $supabaseAnonKey !== '' && $accessToken !== '';
 
+// On gere le cas ou la valeur attendue est vide.
 if ($accessToken === '' || $authUserId === '') {
     $_SESSION['error'] = 'Votre session Supabase est incomplete. Reconnectez-vous.';
     header('Location: /login');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'refresh_session_after_mfa') {
         $_SESSION['supabase_access_token'] = (string) ($_POST['access_token'] ?? $accessToken);
         $_SESSION['supabase_refresh_token'] = (string) ($_POST['refresh_token'] ?? $refreshToken);
@@ -35,24 +42,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'unenroll_factor') {
         $factorId = (string) ($_POST['factor_id'] ?? '');
 
+        // On gere le cas ou la valeur attendue est vide.
         if ($factorId === '') {
             $_SESSION['error'] = 'Facteur MFA invalide.';
             header('Location: /app/account/security.php');
             exit;
         }
 
+        // On appelle Supabase Auth pour gerer l authentification.
         $deleteResult = supabaseAuthDeleteFactor($accessToken, $factorId);
+        // On controle cette condition avant de continuer.
         if (!$deleteResult['ok']) {
+            // On appelle Supabase Auth pour gerer l authentification.
             $_SESSION['error'] = supabaseAuthErrorMessage($deleteResult, 'Impossible de supprimer ce facteur MFA.');
             header('Location: /app/account/security.php');
             exit;
         }
 
+        // On verifie cette condition.
         if ($refreshToken !== '') {
+            // On appelle Supabase Auth pour gerer l authentification.
             $refreshResult = supabaseAuthRefreshSession($refreshToken);
+            // On verifie cette condition.
             if ($refreshResult['ok'] && is_array($refreshResult['data'] ?? null)) {
                 $_SESSION['supabase_access_token'] = (string) ($refreshResult['data']['access_token'] ?? $accessToken);
                 $_SESSION['supabase_refresh_token'] = (string) ($refreshResult['data']['refresh_token'] ?? $refreshToken);
@@ -66,9 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// On appelle Supabase Auth pour gerer l authentification.
 $factorsResult = supabaseAuthAdminListUserFactors($authUserId);
 $factors = is_array($factorsResult['data']) ? $factorsResult['data'] : [];
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -77,6 +94,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <p>La connexion et la double authentification reposent maintenant sur Supabase Auth. Les regles MFA se pilotent depuis l onglet <strong>Authentication</strong> de Supabase, et l activation TOTP peut se faire ici quand la cle publique Supabase est disponible cote navigateur.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['success'])): ?>
     <div class="alert alert-success">
         <?php echo htmlspecialchars($_SESSION['success']); ?>
@@ -84,6 +102,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php unset($_SESSION['success']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error">
         <?php echo htmlspecialchars($_SESSION['error']); ?>
@@ -91,6 +110,7 @@ require_once __DIR__ . '/../../includes/header.php';
     <?php unset($_SESSION['error']); ?>
 <?php endif; ?>
 
+<?php // On controle cette condition avant de continuer. ?>
 <?php if (!$canManageTotpInBrowser): ?>
     <div class="alert alert-error">
         Ajoutez <code>SUPABASE_ANON_KEY</code> dans votre fichier <code>.env</code> pour permettre l enrollement TOTP depuis le navigateur sans exposer la cle secrete serveur.
@@ -100,11 +120,13 @@ require_once __DIR__ . '/../../includes/header.php';
 <div class="grid-container">
     <div class="card">
         <h3>Facteurs actifs</h3>
+        <?php // On controle cette condition avant de continuer. ?>
         <?php if (!$factorsResult['ok']): ?>
             <p>Impossible de charger vos facteurs MFA.</p>
         <?php elseif (empty($factors)): ?>
             <p>Aucun facteur MFA n est actuellement configure.</p>
         <?php else: ?>
+            <?php // On parcourt chaque element de la liste. ?>
             <?php foreach ($factors as $factor): ?>
                 <?php
                     $factorId = (string) ($factor['id'] ?? '');
@@ -131,6 +153,7 @@ require_once __DIR__ . '/../../includes/header.php';
         <h3>Activer le TOTP</h3>
         <p>Ajoutez une application d authentification comme Google Authenticator, 1Password ou Authy.</p>
 
+        <?php // On controle cette condition avant de continuer. ?>
         <?php if ($canManageTotpInBrowser): ?>
             <div id="mfa-feedback" class="alert alert-error" style="display: none;"></div>
 
@@ -169,6 +192,7 @@ require_once __DIR__ . '/../../includes/header.php';
     </div>
 </div>
 
+<?php // On controle cette condition avant de continuer. ?>
 <?php if ($canManageTotpInBrowser): ?>
 <script>
 (function () {
@@ -302,4 +326,5 @@ require_once __DIR__ . '/../../includes/header.php';
 </script>
 <?php endif; ?>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

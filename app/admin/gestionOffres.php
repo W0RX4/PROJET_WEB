@@ -1,16 +1,20 @@
 <?php
+// Fichier qui gere les offres de stage.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie cette condition.
 if (($_SESSION['type'] ?? '') !== 'admin') {
     header('Location: /login');
     exit;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
@@ -19,31 +23,44 @@ $dotenv->safeLoad();
 $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
 $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
 
+// Cette fonction regroupe une action reutilisable.
 function redirectGestionOffres(): void
 {
     header('Location: gestionOffres.php');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
     $stageId = (int) ($_POST['stage_id'] ?? 0);
 
+    // On verifie cette condition.
     if ($stageId <= 0) {
         $_SESSION['error'] = 'Offre invalide.';
         redirectGestionOffres();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'delete') {
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/missions?stage_id=eq.$stageId", $apiKey);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/remarques?stage_id=eq.$stageId", $apiKey);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/cahier_stage?stage_id=eq.$stageId", $apiKey);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/conventions?stage_id=eq.$stageId", $apiKey);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/candidatures?stage_id=eq.$stageId", $apiKey);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('PATCH', "$baseUrl/users?stage_id=eq.$stageId", $apiKey, ['stage_id' => null]);
+        // On appelle Supabase pour lire ou modifier les donnees.
         supabaseRestRequest('DELETE', "$baseUrl/documents?stage_id=eq.$stageId", $apiKey);
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $deleteResult = supabaseRestRequest('DELETE', "$baseUrl/stages?id=eq.$stageId", $apiKey);
+        // On controle cette condition avant de continuer.
         if (!$deleteResult['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($deleteResult, 'Suppression impossible.');
             redirectGestionOffres();
@@ -52,20 +69,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectGestionOffres();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'publish') {
         $statusValue = (string) ($_POST['status'] ?? 'ouverte');
+        // On prepare les donnees utilisees dans ce bloc.
         $allowed = ['ouverte', 'fermée', 'archivée', 'en cours'];
+        // On verifie cette condition.
         if (!in_array($statusValue, $allowed, true)) {
             $_SESSION['error'] = 'Statut invalide.';
             redirectGestionOffres();
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $update = supabaseRestRequest(
             'PATCH',
             "$baseUrl/stages?id=eq.$stageId",
             $apiKey,
             ['status' => $statusValue]
         );
+        // On controle cette condition avant de continuer.
         if (!$update['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($update, 'Mise à jour du statut impossible.');
             redirectGestionOffres();
@@ -75,70 +97,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $filiereFilter = trim((string) ($_GET['filiere'] ?? ''));
 $durationMin = (int) ($_GET['duration_min'] ?? 0);
 $durationMax = (int) ($_GET['duration_max'] ?? 0);
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $missionFilter = trim((string) ($_GET['mission'] ?? ''));
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $statusFilter = trim((string) ($_GET['status'] ?? ''));
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $keyword = trim((string) ($_GET['q'] ?? ''));
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=*&order=created_at.desc", $apiKey);
 $allStages = is_array($stagesResult['data']) ? $stagesResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $missionsResult = supabaseRestRequest('GET', "$baseUrl/missions?select=*", $apiKey);
 $allMissions = is_array($missionsResult['data']) ? $missionsResult['data'] : [];
+// On prepare les donnees utilisees dans ce bloc.
 $missionsByStage = [];
+// On parcourt chaque element de la liste.
 foreach ($allMissions as $mission) {
     $missionsByStage[(int) ($mission['stage_id'] ?? 0)][] = $mission;
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $candidaturesResult = supabaseRestRequest('GET', "$baseUrl/candidatures?select=stage_id", $apiKey);
+// On prepare les donnees utilisees dans ce bloc.
 $candidatureCounts = [];
+// On parcourt chaque element de la liste.
 foreach ((is_array($candidaturesResult['data']) ? $candidaturesResult['data'] : []) as $c) {
     $sid = (int) ($c['stage_id'] ?? 0);
     $candidatureCounts[$sid] = ($candidatureCounts[$sid] ?? 0) + 1;
 }
 
+// On prepare les donnees utilisees dans ce bloc.
 $filieres = [];
+// On parcourt chaque element de la liste.
 foreach ($allStages as $stage) {
     $f = (string) ($stage['filiere'] ?? '');
+    // On verifie cette condition.
     if ($f !== '' && !in_array($f, $filieres, true)) {
         $filieres[] = $f;
     }
 }
 sort($filieres);
 
+// On prepare les donnees utilisees dans ce bloc.
 $filteredStages = [];
+// On parcourt chaque element de la liste.
 foreach ($allStages as $stage) {
+    // On verifie cette condition.
     if ($filiereFilter !== '' && (string) ($stage['filiere'] ?? '') !== $filiereFilter) {
         continue;
     }
     $weeks = (int) ($stage['duration_weeks'] ?? 0);
+    // On verifie cette condition.
     if ($durationMin > 0 && $weeks < $durationMin) {
         continue;
     }
+    // On verifie cette condition.
     if ($durationMax > 0 && $weeks > $durationMax) {
         continue;
     }
+    // On verifie cette condition.
     if ($statusFilter !== '' && (string) ($stage['status'] ?? '') !== $statusFilter) {
         continue;
     }
+    // On verifie cette condition.
     if ($keyword !== '') {
         $haystack = strtolower(($stage['title'] ?? '') . ' ' . ($stage['description'] ?? '') . ' ' . ($stage['company'] ?? '') . ' ' . ($stage['location'] ?? ''));
+        // On verifie cette condition.
         if (strpos($haystack, strtolower($keyword)) === false) {
             continue;
         }
     }
+    // On verifie cette condition.
     if ($missionFilter !== '') {
         $stageMissions = $missionsByStage[(int) ($stage['id'] ?? 0)] ?? [];
         $found = false;
+        // On parcourt chaque element de la liste.
         foreach ($stageMissions as $m) {
             $combined = strtolower(($m['title'] ?? '') . ' ' . ($m['description'] ?? ''));
+            // On verifie cette condition.
             if (strpos($combined, strtolower($missionFilter)) !== false) {
                 $found = true;
                 break;
             }
         }
+        // On controle cette condition avant de continuer.
         if (!$found) {
             continue;
         }
@@ -147,6 +195,7 @@ foreach ($allStages as $stage) {
     $filteredStages[] = $stage;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -155,11 +204,13 @@ require_once __DIR__ . '/../../includes/header.php';
     <p>Filtrez les offres par filière, durée, missions ou mots-clés. Mettez à jour leur statut pour favoriser leur diffusion.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success"><?php echo htmlspecialchars($_SESSION['result']); ?></div>
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error"><?php echo htmlspecialchars($_SESSION['error']); ?></div>
     <?php unset($_SESSION['error']); ?>
@@ -176,6 +227,7 @@ require_once __DIR__ . '/../../includes/header.php';
             <label class="form-label" for="filiere">Filière</label>
             <select class="form-control" id="filiere" name="filiere">
                 <option value="">Toutes</option>
+                <?php // On parcourt chaque element de la liste. ?>
                 <?php foreach ($filieres as $f): ?>
                     <option value="<?php echo htmlspecialchars($f); ?>" <?php echo $filiereFilter === $f ? 'selected' : ''; ?>><?php echo htmlspecialchars($f); ?></option>
                 <?php endforeach; ?>
@@ -214,10 +266,12 @@ require_once __DIR__ . '/../../includes/header.php';
     <h3>Résultats : <?php echo count($filteredStages); ?> offre(s)</h3>
 </div>
 
+<?php // On gere le cas ou la valeur attendue est vide. ?>
 <?php if (empty($filteredStages)): ?>
     <div class="card"><p>Aucune offre ne correspond aux filtres.</p></div>
 <?php else: ?>
     <div class="grid-container">
+        <?php // On parcourt chaque element de la liste. ?>
         <?php foreach ($filteredStages as $stage): ?>
             <?php
                 $sid = (int) ($stage['id'] ?? 0);
@@ -239,10 +293,12 @@ require_once __DIR__ . '/../../includes/header.php';
                     <p><strong>Candidatures :</strong> <?php echo $candidatureCount; ?></p>
                 </div>
 
+                <?php // On verifie cette condition. ?>
                 <?php if (!empty($stageMissions)): ?>
                     <div style="margin-top: 0.75rem;">
                         <strong>Missions :</strong>
                         <ul style="margin-top: 0.4rem; padding-left: 1.2rem; color: var(--text-secondary);">
+                            <?php // On parcourt chaque element de la liste. ?>
                             <?php foreach ($stageMissions as $m): ?>
                                 <li><?php echo htmlspecialchars($m['title'] ?? ''); ?><?php if (!empty($m['description'])): ?> — <?php echo htmlspecialchars($m['description']); ?><?php endif; ?></li>
                             <?php endforeach; ?>
@@ -277,4 +333,5 @@ require_once __DIR__ . '/../../includes/header.php';
     <a class="btn btn-secondary mt-4" href="accueilAdmin.php">Retour à l'accueil</a>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

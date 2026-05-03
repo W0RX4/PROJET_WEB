@@ -1,19 +1,24 @@
 <?php
+// Fichier qui affiche et met a jour le profil utilisateur.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 require_once __DIR__ . '/../../includes/trace.php';
 
+// On demarre la session si elle n existe pas encore.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login');
     exit;
 }
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
+// On verifie cette condition.
 if (!isset($_ENV['SUPABASE_URL'])) {
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
@@ -23,31 +28,38 @@ $apiKey = (string) ($_ENV['SUPABASE_KEY'] ?? '');
 $baseUrl = rtrim((string) ($_ENV['SUPABASE_URL'] ?? ''), '/') . '/rest/v1';
 $userId = (int) ($_SESSION['user_id'] ?? 0);
 
+// Cette fonction renvoie vers la page de profil.
 function redirectToProfil(): void
 {
     header('Location: /app/account/profil.php');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // On recupere et nettoie une valeur envoyee par l utilisateur.
     $newUsername = trim((string) ($_POST['username'] ?? ''));
 
+    // On gere le cas ou la valeur attendue est vide.
     if ($newUsername === '' || mb_strlen($newUsername) > 255) {
         $_SESSION['error'] = "Le nom d'utilisateur est obligatoire (255 caractères max).";
         redirectToProfil();
     }
 
+    // On appelle Supabase pour lire ou modifier les donnees.
     $duplicateResult = supabaseRestRequest(
         'GET',
         "$baseUrl/users?username=eq." . rawurlencode($newUsername) . "&id=neq.$userId&select=id&limit=1",
         $apiKey
     );
 
+    // On verifie cette condition.
     if (is_array($duplicateResult['data']) && !empty($duplicateResult['data'])) {
         $_SESSION['error'] = "Ce nom d'utilisateur est déjà pris.";
         redirectToProfil();
     }
 
+    // On appelle Supabase pour lire ou modifier les donnees.
     $updateResult = supabaseRestRequest(
         'PATCH',
         "$baseUrl/users?id=eq.$userId",
@@ -55,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ['username' => $newUsername]
     );
 
+    // On controle cette condition avant de continuer.
     if (!$updateResult['ok']) {
         $_SESSION['error'] = supabaseRestErrorMessage($updateResult, 'Mise à jour du profil impossible.');
         redirectToProfil();
@@ -68,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 stageArchiveLogPageAccess('/app/account/profil.php');
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $profileResult = supabaseRestRequest(
     'GET',
     "$baseUrl/users?id=eq.$userId&select=id,username,email,type,created_at&limit=1",
@@ -78,6 +92,7 @@ $profile = is_array($profileResult['data']) && isset($profileResult['data'][0]) 
 $accessCount = stageArchiveCountTracesForUser($userId, 'login');
 $actionsCount = stageArchiveCountTracesForUser($userId);
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -86,13 +101,16 @@ require_once __DIR__ . '/../../includes/header.php';
     <p>Consultez et mettez à jour vos informations personnelles.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success"><?php echo htmlspecialchars($_SESSION['result']); unset($_SESSION['result']); ?></div>
 <?php endif; ?>
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error"><?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?></div>
 <?php endif; ?>
 
+<?php // On controle cette condition avant de continuer. ?>
 <?php if (!$profile): ?>
     <div class="card"><p>Profil introuvable.</p></div>
 <?php else: ?>
@@ -128,4 +146,5 @@ require_once __DIR__ . '/../../includes/header.php';
     </div>
 <?php endif; ?>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

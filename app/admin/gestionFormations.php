@@ -1,16 +1,20 @@
 <?php
+// Fichier qui gere les formations et filieres.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
@@ -19,26 +23,34 @@ $dotenv->safeLoad();
 $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
 $baseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/') . '/rest/v1';
 
+// Cette fonction regroupe une action reutilisable.
 function redirectGestionFormations(): void
 {
     header('Location: gestionFormations.php');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'create_formation') {
+        // On recupere et nettoie une valeur envoyee par l utilisateur.
         $name = trim((string) ($_POST['name'] ?? ''));
+        // On recupere et nettoie une valeur envoyee par l utilisateur.
         $department = trim((string) ($_POST['department'] ?? ''));
+        // On gere le cas ou la valeur attendue est vide.
         if ($name === '') {
             $_SESSION['error'] = 'Le nom de la formation est obligatoire.';
             redirectGestionFormations();
         }
+        // On appelle Supabase pour lire ou modifier les donnees.
         $createResult = supabaseRestRequest('POST', "$baseUrl/formations", $apiKey, [
             'name' => $name,
             'department' => $department,
         ]);
+        // On controle cette condition avant de continuer.
         if (!$createResult['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($createResult, 'Création impossible.');
             redirectGestionFormations();
@@ -47,13 +59,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectGestionFormations();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'delete_formation') {
         $formationId = (int) ($_POST['formation_id'] ?? 0);
+        // On verifie cette condition.
         if ($formationId <= 0) {
             $_SESSION['error'] = 'Formation invalide.';
             redirectGestionFormations();
         }
+        // On appelle Supabase pour lire ou modifier les donnees.
         $deleteResult = supabaseRestRequest('DELETE', "$baseUrl/formations?id=eq.$formationId", $apiKey);
+        // On controle cette condition avant de continuer.
         if (!$deleteResult['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($deleteResult, 'Suppression impossible.');
             redirectGestionFormations();
@@ -62,13 +78,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectGestionFormations();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'approve_request') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
+        // On verifie cette condition.
         if ($requestId <= 0) {
             $_SESSION['error'] = 'Demande invalide.';
             redirectGestionFormations();
         }
+        // On appelle Supabase pour lire ou modifier les donnees.
         $update = supabaseRestRequest('PATCH', "$baseUrl/formation_requests?id=eq.$requestId", $apiKey, ['status' => 'validée']);
+        // On controle cette condition avant de continuer.
         if (!$update['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($update, 'Validation impossible.');
             redirectGestionFormations();
@@ -77,13 +97,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectGestionFormations();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'reject_request') {
         $requestId = (int) ($_POST['request_id'] ?? 0);
+        // On verifie cette condition.
         if ($requestId <= 0) {
             $_SESSION['error'] = 'Demande invalide.';
             redirectGestionFormations();
         }
+        // On appelle Supabase pour lire ou modifier les donnees.
         $update = supabaseRestRequest('PATCH', "$baseUrl/formation_requests?id=eq.$requestId", $apiKey, ['status' => 'refusée']);
+        // On controle cette condition avant de continuer.
         if (!$update['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($update, 'Refus impossible.');
             redirectGestionFormations();
@@ -92,18 +116,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectGestionFormations();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'reuse_student') {
         $studentId = (int) ($_POST['student_id'] ?? 0);
+        // On verifie cette condition.
         if ($studentId <= 0) {
             $_SESSION['error'] = 'Étudiant invalide.';
             redirectGestionFormations();
         }
+        // On appelle Supabase pour lire ou modifier les donnees.
         $detachStage = supabaseRestRequest('PATCH', "$baseUrl/users?id=eq.$studentId", $apiKey, ['stage_id' => null]);
+        // On appelle Supabase pour lire ou modifier les donnees.
         $closeOldStages = supabaseRestRequest('PATCH', "$baseUrl/stages?student_id=eq.$studentId", $apiKey, [
             'student_id' => null,
             'status' => 'archivée',
         ]);
 
+        // On controle cette condition avant de continuer.
         if (!$detachStage['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($detachStage, 'Réinitialisation impossible.');
             redirectGestionFormations();
@@ -113,20 +142,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $formationsResult = supabaseRestRequest('GET', "$baseUrl/formations?select=*&order=created_at.desc", $apiKey);
 $formations = is_array($formationsResult['data']) ? $formationsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $requestsResult = supabaseRestRequest('GET', "$baseUrl/formation_requests?select=*&order=created_at.desc", $apiKey);
 $requests = is_array($requestsResult['data']) ? $requestsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $usersResult = supabaseRestRequest('GET', "$baseUrl/users?type=eq.etudiant&select=id,username,email,stage_id,created_at&order=created_at.asc", $apiKey);
 $students = is_array($usersResult['data']) ? $usersResult['data'] : [];
 
+// On prepare les donnees utilisees dans ce bloc.
 $usersById = [];
+// On parcourt chaque element de la liste.
 foreach ($students as $user) {
     $usersById[(int) ($user['id'] ?? 0)] = $user;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -135,11 +170,13 @@ require_once __DIR__ . '/../../includes/header.php';
     <p>Gérez les formations proposées, validez les demandes et préparez la réutilisation des profils étudiants pour la prochaine promotion.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success"><?php echo htmlspecialchars($_SESSION['result']); ?></div>
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error"><?php echo htmlspecialchars($_SESSION['error']); ?></div>
     <?php unset($_SESSION['error']); ?>
@@ -164,6 +201,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
     <div class="card">
         <h3>Formations existantes</h3>
+        <?php // On gere le cas ou la valeur attendue est vide. ?>
         <?php if (empty($formations)): ?>
             <p>Aucune formation enregistrée.</p>
         <?php else: ?>
@@ -176,6 +214,7 @@ require_once __DIR__ . '/../../includes/header.php';
                     </tr>
                 </thead>
                 <tbody>
+                    <?php // On parcourt chaque element de la liste. ?>
                     <?php foreach ($formations as $formation): ?>
                         <tr style="border-bottom:1px solid var(--border-color);">
                             <td style="padding:0.5rem;"><?php echo htmlspecialchars($formation['name'] ?? ''); ?></td>
@@ -197,6 +236,7 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <div class="card">
     <h3>Demandes de formation des étudiants</h3>
+    <?php // On gere le cas ou la valeur attendue est vide. ?>
     <?php if (empty($requests)): ?>
         <p>Aucune demande en attente.</p>
     <?php else: ?>
@@ -211,6 +251,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 </tr>
             </thead>
             <tbody>
+                <?php // On parcourt chaque element de la liste. ?>
                 <?php foreach ($requests as $request): ?>
                     <?php
                         $student = $usersById[(int) ($request['student_id'] ?? 0)] ?? null;
@@ -223,6 +264,7 @@ require_once __DIR__ . '/../../includes/header.php';
                         <td style="padding:0.5rem;"><span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($status); ?></span></td>
                         <td style="padding:0.5rem;"><?php echo htmlspecialchars(substr((string) ($request['created_at'] ?? ''), 0, 10)); ?></td>
                         <td style="padding:0.5rem; display:flex; gap:0.4rem;">
+                            <?php // On verifie cette condition. ?>
                             <?php if ($status === 'en attente'): ?>
                                 <form method="POST">
                                     <input type="hidden" name="action" value="approve_request">
@@ -246,6 +288,7 @@ require_once __DIR__ . '/../../includes/header.php';
 <div class="card">
     <h3>Réutilisation des profils étudiants</h3>
     <p style="color: var(--text-secondary);">Conservez les informations personnelles de l'étudiant et préparez son dossier pour une nouvelle année (les anciens stages sont archivés).</p>
+    <?php // On gere le cas ou la valeur attendue est vide. ?>
     <?php if (empty($students)): ?>
         <p>Aucun étudiant inscrit.</p>
     <?php else: ?>
@@ -260,6 +303,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 </tr>
             </thead>
             <tbody>
+                <?php // On parcourt chaque element de la liste. ?>
                 <?php foreach ($students as $student): ?>
                     <tr style="border-bottom:1px solid var(--border-color);">
                         <td style="padding:0.5rem;"><?php echo htmlspecialchars($student['username'] ?? ''); ?></td>
@@ -284,4 +328,5 @@ require_once __DIR__ . '/../../includes/header.php';
     <a class="btn btn-secondary mt-4" href="accueilAdmin.php">Retour à l'accueil</a>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

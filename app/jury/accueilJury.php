@@ -1,13 +1,16 @@
 <?php
+// Fichier qui affiche le tableau de bord jury.
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
 
+    // On verifie que l utilisateur a le droit d acceder a cette page.
     if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'jury') {
         header('Location: /login');
         exit;
     }
 
+    // On charge les fichiers necessaires.
     require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -21,4 +24,5 @@
     <p>Liste des soutenances à venir...</p>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once '../../includes/footer.php'; ?>

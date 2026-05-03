@@ -1,17 +1,21 @@
 <?php
+// Fichier qui permet a une entreprise de suivre les candidatures.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'entreprise') {
     header('Location: /login');
     exit;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 require_once __DIR__ . '/../../supabaseQuery/getSupabaseSignedUrl.php';
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
@@ -23,20 +27,24 @@ $stageId = (int) ($_POST['stage_id'] ?? $_GET['id'] ?? 0);
 $companyId = (int) ($_SESSION['user_id'] ?? 0);
 $companyName = (string) ($_SESSION['username'] ?? '');
 
+// Cette fonction regroupe une action reutilisable.
 function redirectToStage(int $stageId): void
 {
     header('Location: candidatures.php?id=' . $stageId);
     exit;
 }
 
+// Cette fonction regroupe une action reutilisable.
 function fetchStageById(int $stageId, string $baseUrl, string $apiKey): array
 {
+    // On appelle Supabase pour lire ou modifier les donnees.
     $result = supabaseRestRequest('GET', "$baseUrl/stages?id=eq.$stageId&select=*", $apiKey);
     $stage = is_array($result['data']) && isset($result['data'][0]) ? $result['data'][0] : null;
 
     return [$result, $stage];
 }
 
+// Cette fonction regroupe une action reutilisable.
 function isOwnedByCompany(array $stage, int $companyId, string $companyName): bool
 {
     $matchesCompanyId = $companyId > 0 && (int) ($stage['company_id'] ?? 0) === $companyId;
@@ -45,14 +53,17 @@ function isOwnedByCompany(array $stage, int $companyId, string $companyName): bo
     return $matchesCompanyId || $matchesCompanyName;
 }
 
+// Cette fonction regroupe une action reutilisable.
 function stageStatusBadgeClass(string $status): string
 {
     $normalized = strtolower(trim($status));
 
+    // On verifie cette condition.
     if (in_array($normalized, ['retenue', 'validée', 'validee', 'en cours', 'acceptée par l\'étudiant', 'convention envoyée'], true)) {
         return 'badge badge-valid';
     }
 
+    // On verifie cette condition.
     if (in_array($normalized, ['refusée', 'refusee', 'annulée', 'annulee', 'refusée par l\'étudiant', 'refusee par l\'etudiant'], true)) {
         return 'badge badge-progress';
     }
@@ -60,6 +71,7 @@ function stageStatusBadgeClass(string $status): string
     return 'badge badge-pending';
 }
 
+// On verifie cette condition.
 if ($stageId <= 0) {
     $_SESSION['error'] = 'Offre introuvable.';
     header('Location: mesOffres.php');
@@ -68,23 +80,28 @@ if ($stageId <= 0) {
 
 [$stageFetchResult, $stage] = fetchStageById($stageId, $baseUrl, $apiKey);
 
+// On controle cette condition avant de continuer.
 if (!$stageFetchResult['ok'] || !$stage || !isOwnedByCompany($stage, $companyId, $companyName)) {
     $_SESSION['error'] = 'Cette offre est introuvable ou ne vous appartient pas.';
     header('Location: mesOffres.php');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'accept_candidate') {
         $studentId = (int) ($_POST['student_id'] ?? 0);
 
+        // On verifie cette condition.
         if ($studentId <= 0) {
             $_SESSION['error'] = 'Étudiant invalide.';
             redirectToStage($stageId);
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $stageCandidatesResult = supabaseRestRequest(
             'GET',
             "$baseUrl/candidatures?stage_id=eq.$stageId&select=id,student_id,status",
@@ -94,7 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $candidate = null;
         $hasConflictingCandidate = false;
 
+        // On parcourt chaque element de la liste.
         foreach ($stageCandidates as $stageCandidate) {
+            // On verifie cette condition.
             if ((int) ($stageCandidate['student_id'] ?? 0) === $studentId) {
                 $candidate = $stageCandidate;
             } elseif (in_array((string) ($stageCandidate['status'] ?? ''), ['proposition envoyée', 'acceptée par l\'étudiant', 'convention envoyée'], true)) {
@@ -102,21 +121,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             }
         }
 
+        // On controle cette condition avant de continuer.
         if (!$stageCandidatesResult['ok'] || !$candidate) {
             $_SESSION['error'] = 'Impossible d’accepter un étudiant non candidat.';
             redirectToStage($stageId);
         }
 
+        // On verifie cette condition.
         if ((int) ($stage['student_id'] ?? 0) !== 0 && (int) ($stage['student_id'] ?? 0) !== $studentId) {
             $_SESSION['error'] = 'Un autre étudiant a déjà accepté cette offre.';
             redirectToStage($stageId);
         }
 
+        // On controle cette condition avant de continuer.
         if ($hasConflictingCandidate) {
             $_SESSION['error'] = 'Une autre candidature est déjà en attente de réponse ou a déjà été confirmée pour cette offre.';
             redirectToStage($stageId);
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $conventionLookup = supabaseRestRequest(
             'GET',
             "$baseUrl/conventions?stage_id=eq.$stageId&student_id=eq.$studentId&select=id",
@@ -124,14 +147,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         );
         $existingConvention = is_array($conventionLookup['data']) && isset($conventionLookup['data'][0]) ? $conventionLookup['data'][0] : null;
 
+        // On controle cette condition avant de continuer.
         if (!$conventionLookup['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($conventionLookup, 'Impossible de préparer la convention.');
             redirectToStage($stageId);
         }
 
+        // On controle cette condition avant de continuer.
         if ($existingConvention) {
+            // On prepare les donnees utilisees dans ce bloc.
             $conventionSave = ['ok' => true];
         } else {
+            // On appelle Supabase pour lire ou modifier les donnees.
             $conventionSave = supabaseRestRequest(
                 'POST',
                 "$baseUrl/conventions",
@@ -144,11 +171,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             );
         }
 
+        // On controle cette condition avant de continuer.
         if (!$conventionSave['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($conventionSave, 'Impossible de préparer la convention.');
             redirectToStage($stageId);
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $candidateUpdate = supabaseRestRequest(
             'PATCH',
             "$baseUrl/candidatures?id=eq." . (int) $candidate['id'],
@@ -156,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             ['status' => 'proposition envoyée']
         );
 
+        // On controle cette condition avant de continuer.
         if (!$candidateUpdate['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($candidateUpdate, 'Proposition envoyée, mais le statut de candidature n’a pas pu être mis à jour.');
             redirectToStage($stageId);
@@ -165,20 +195,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectToStage($stageId);
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'add_mission') {
+        // On recupere et nettoie une valeur envoyee par l utilisateur.
         $title = trim((string) ($_POST['title'] ?? ''));
+        // On recupere et nettoie une valeur envoyee par l utilisateur.
         $description = trim((string) ($_POST['description'] ?? ''));
 
+        // On verifie cette condition.
         if ((int) ($stage['student_id'] ?? 0) === 0) {
             $_SESSION['error'] = 'L’étudiant doit d’abord accepter le stage avant l’ajout de missions complémentaires.';
             redirectToStage($stageId);
         }
 
+        // On gere le cas ou la valeur attendue est vide.
         if ($title === '') {
             $_SESSION['error'] = 'Le titre de mission est obligatoire.';
             redirectToStage($stageId);
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $missionResult = supabaseRestRequest(
             'POST',
             "$baseUrl/missions",
@@ -191,6 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             ]
         );
 
+        // On controle cette condition avant de continuer.
         if (!$missionResult['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($missionResult, 'Impossible d’ajouter la mission.');
             redirectToStage($stageId);
@@ -200,14 +237,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectToStage($stageId);
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'add_remark') {
+        // On recupere et nettoie une valeur envoyee par l utilisateur.
         $content = trim((string) ($_POST['content'] ?? ''));
 
+        // On gere le cas ou la valeur attendue est vide.
         if ($content === '') {
             $_SESSION['error'] = 'La remarque ne peut pas être vide.';
             redirectToStage($stageId);
         }
 
+        // On appelle Supabase pour lire ou modifier les donnees.
         $remarkResult = supabaseRestRequest(
             'POST',
             "$baseUrl/remarques",
@@ -219,6 +260,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             ]
         );
 
+        // On controle cette condition avant de continuer.
         if (!$remarkResult['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($remarkResult, 'Impossible d’ajouter la remarque.');
             redirectToStage($stageId);
@@ -231,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 [$stageFetchResult, $stage] = fetchStageById($stageId, $baseUrl, $apiKey);
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $candidaturesResult = supabaseRestRequest(
     'GET',
     "$baseUrl/candidatures?stage_id=eq.$stageId&select=*&order=created_at.desc",
@@ -238,6 +281,7 @@ $candidaturesResult = supabaseRestRequest(
 );
 $candidatures = is_array($candidaturesResult['data']) ? $candidaturesResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $conventionsResult = supabaseRestRequest(
     'GET',
     "$baseUrl/conventions?stage_id=eq.$stageId&select=*&order=created_at.desc",
@@ -245,6 +289,7 @@ $conventionsResult = supabaseRestRequest(
 );
 $conventions = is_array($conventionsResult['data']) ? $conventionsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $missionsResult = supabaseRestRequest(
     'GET',
     "$baseUrl/missions?stage_id=eq.$stageId&select=*&order=created_at.desc",
@@ -252,6 +297,7 @@ $missionsResult = supabaseRestRequest(
 );
 $missions = is_array($missionsResult['data']) ? $missionsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $remarksResult = supabaseRestRequest(
     'GET',
     "$baseUrl/remarques?stage_id=eq.$stageId&select=*&order=created_at.desc",
@@ -259,6 +305,7 @@ $remarksResult = supabaseRestRequest(
 );
 $remarks = is_array($remarksResult['data']) ? $remarksResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $documentsResult = supabaseRestRequest(
     'GET',
     "$baseUrl/documents?stage_id=eq.$stageId&select=id,user_id,type,file_path,file_name,uploaded_at&order=uploaded_at.desc",
@@ -266,25 +313,33 @@ $documentsResult = supabaseRestRequest(
 );
 $documents = is_array($documentsResult['data']) ? $documentsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $usersResult = supabaseRestRequest(
     'GET',
     "$baseUrl/users?select=id,username,email",
     $apiKey
 );
 $users = is_array($usersResult['data']) ? $usersResult['data'] : [];
+// On prepare les donnees utilisees dans ce bloc.
 $usersMap = [];
+// On parcourt chaque element de la liste.
 foreach ($users as $user) {
     $usersMap[(int) ($user['id'] ?? 0)] = $user;
 }
 
+// On prepare les donnees utilisees dans ce bloc.
 $conventionsByStudent = [];
+// On parcourt chaque element de la liste.
 foreach ($conventions as $convention) {
     $conventionsByStudent[(int) ($convention['student_id'] ?? 0)] = $convention;
 }
 
+// On prepare les donnees utilisees dans ce bloc.
 $documentsByUser = [];
+// On parcourt chaque element de la liste.
 foreach ($documents as $document) {
     $userId = (int) ($document['user_id'] ?? 0);
+    // On verifie cette condition.
     if ($userId > 0) {
         $documentsByUser[$userId][] = $document;
     }
@@ -294,7 +349,9 @@ $selectedStudentId = (int) ($stage['student_id'] ?? 0);
 $selectedStudent = $selectedStudentId > 0 ? ($usersMap[$selectedStudentId] ?? null) : null;
 $selectedConvention = $selectedStudentId > 0 ? ($conventionsByStudent[$selectedStudentId] ?? null) : null;
 $pendingProposal = null;
+// On parcourt chaque element de la liste.
 foreach ($candidatures as $currentCandidature) {
+    // On verifie cette condition.
     if (($currentCandidature['status'] ?? '') === 'proposition envoyée') {
         $pendingProposal = $currentCandidature;
         break;
@@ -302,6 +359,7 @@ foreach ($candidatures as $currentCandidature) {
 }
 $pendingProposalStudent = $pendingProposal ? ($usersMap[(int) ($pendingProposal['student_id'] ?? 0)] ?? null) : null;
 
+// On charge les fichiers necessaires.
 require_once '../../includes/header.php';
 ?>
 
@@ -310,6 +368,7 @@ require_once '../../includes/header.php';
     <p><?php echo nl2br(htmlspecialchars($stage['description'] ?? '')); ?></p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success">
         <?php echo htmlspecialchars($_SESSION['result']); ?>
@@ -317,6 +376,7 @@ require_once '../../includes/header.php';
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error">
         <?php echo htmlspecialchars($_SESSION['error']); ?>
@@ -324,6 +384,7 @@ require_once '../../includes/header.php';
     <?php unset($_SESSION['error']); ?>
 <?php endif; ?>
 
+<?php // On controle cette condition avant de continuer. ?>
 <?php if (!$stageFetchResult['ok']): ?>
     <div class="alert alert-error">
         <?php echo htmlspecialchars(supabaseRestErrorMessage($stageFetchResult, 'Impossible de charger cette offre.')); ?>
@@ -346,6 +407,7 @@ require_once '../../includes/header.php';
         </div>
     </div>
 
+    <?php // On controle cette condition avant de continuer. ?>
     <?php if ($selectedConvention): ?>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
             <p><strong>Convention côté entreprise :</strong> <?php echo !empty($selectedConvention['company_validated']) ? 'préparée' : 'en attente'; ?></p>
@@ -359,6 +421,7 @@ require_once '../../includes/header.php';
     <div class="card">
         <h3>Attribuer des missions</h3>
         <p style="margin-bottom: 1rem;">
+            <?php // On controle cette condition avant de continuer. ?>
             <?php if ($selectedStudent): ?>
                 Les missions ajoutées ici sont associées au stage de <?php echo htmlspecialchars($selectedStudent['username']); ?>.
             <?php elseif ($pendingProposalStudent): ?>
@@ -368,9 +431,11 @@ require_once '../../includes/header.php';
             <?php endif; ?>
         </p>
 
+        <?php // On gere le cas ou la valeur attendue est vide. ?>
         <?php if (empty($missions)): ?>
             <p style="margin-bottom: 1rem;">Aucune mission n’a encore été créée.</p>
         <?php else: ?>
+            <?php // On parcourt chaque element de la liste. ?>
             <?php foreach ($missions as $mission): ?>
                 <div style="padding: 0.9rem 0; border-top: 1px solid var(--border-color);">
                     <strong><?php echo htmlspecialchars($mission['title'] ?? 'Mission'); ?></strong>
@@ -401,9 +466,11 @@ require_once '../../includes/header.php';
         <h3>Remarques sur le stage</h3>
         <p style="margin-bottom: 1rem;">Centralisez vos observations et points de suivi pour cette offre.</p>
 
+        <?php // On gere le cas ou la valeur attendue est vide. ?>
         <?php if (empty($remarks)): ?>
             <p style="margin-bottom: 1rem;">Aucune remarque enregistrée pour le moment.</p>
         <?php else: ?>
+            <?php // On parcourt chaque element de la liste. ?>
             <?php foreach ($remarks as $remark): ?>
                 <?php $author = $usersMap[(int) ($remark['author_id'] ?? 0)] ?? null; ?>
                 <div style="padding: 0.9rem 0; border-top: 1px solid var(--border-color);">
@@ -437,16 +504,19 @@ require_once '../../includes/header.php';
     <p>Consultez les documents des étudiants puis envoyez une proposition au profil retenu. L’étudiant confirmera ensuite le stage depuis son espace.</p>
 </div>
 
+<?php // On controle cette condition avant de continuer. ?>
 <?php if (!$candidaturesResult['ok']): ?>
     <div class="alert alert-error">
         <?php echo htmlspecialchars(supabaseRestErrorMessage($candidaturesResult, 'Impossible de charger les candidatures.')); ?>
     </div>
 <?php endif; ?>
 
+<?php // On gere le cas ou la valeur attendue est vide. ?>
 <?php if (empty($candidatures)): ?>
     <div class="card"><p>Aucune candidature n'est disponible pour ce stage.</p></div>
 <?php else: ?>
     <div class="grid-container">
+        <?php // On parcourt chaque element de la liste. ?>
         <?php foreach ($candidatures as $candidature): ?>
             <?php
                 $studentId = (int) ($candidature['student_id'] ?? 0);
@@ -475,23 +545,29 @@ require_once '../../includes/header.php';
                 </div>
 
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <?php // On controle cette condition avant de continuer. ?>
                     <?php if ($cvUrl): ?>
                         <a href="<?php echo htmlspecialchars($cvUrl); ?>" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem;">Voir le CV</a>
                     <?php endif; ?>
+                    <?php // On controle cette condition avant de continuer. ?>
                     <?php if ($lmUrl): ?>
                         <a href="<?php echo htmlspecialchars($lmUrl); ?>" target="_blank" class="btn btn-primary" style="padding: 0.5rem 1rem;">Voir la LM</a>
                     <?php endif; ?>
+                    <?php // On controle cette condition avant de continuer. ?>
                     <?php if (!$cvUrl && !$lmUrl): ?>
                         <span class="btn btn-secondary" style="padding: 0.5rem 1rem; opacity: 0.65;">Documents de candidature indisponibles</span>
                     <?php endif; ?>
                 </div>
 
+                <?php // On verifie cette condition. ?>
                 <?php if (!empty($studentDocuments)): ?>
                     <div style="margin-top: 1rem;">
                         <p style="font-weight: 600; margin-bottom: 0.5rem;">Documents supplémentaires</p>
+                        <?php // On parcourt chaque element de la liste. ?>
                         <?php foreach ($studentDocuments as $document): ?>
                             <?php $documentUrl = !empty($document['file_path']) ? getSupabaseSignedUrl($document['file_path'], $_ENV['SUPABASE_URL'], $_ENV['SUPABASE_KEY']) : null; ?>
                             <div style="margin-bottom: 0.4rem;">
+                                <?php // On controle cette condition avant de continuer. ?>
                                 <?php if ($documentUrl): ?>
                                     <a href="<?php echo htmlspecialchars($documentUrl); ?>" target="_blank">
                                         <?php echo htmlspecialchars(($document['type'] ?? 'document') . ' - ' . ($document['file_name'] ?? 'fichier')); ?>
@@ -505,6 +581,7 @@ require_once '../../includes/header.php';
                 <?php endif; ?>
 
                 <div style="margin-top: 1.25rem;">
+                    <?php // On verifie cette condition. ?>
                     <?php if ($status === 'proposition envoyée'): ?>
                         <p style="color: var(--text-secondary);">Proposition envoyée. En attente de la réponse de l’étudiant.</p>
                     <?php elseif (in_array($status, ['acceptée par l\'étudiant', 'convention envoyée'], true)): ?>
@@ -533,4 +610,5 @@ require_once '../../includes/header.php';
     <a class="btn btn-secondary mt-4" href="mesOffres.php">Retour à mes offres</a>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once '../../includes/footer.php'; ?>

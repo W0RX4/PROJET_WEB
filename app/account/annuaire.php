@@ -1,19 +1,24 @@
 <?php
+// Fichier qui affiche l annuaire des membres avec filtres.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 require_once __DIR__ . '/../../includes/trace.php';
 
+// On demarre la session si elle n existe pas encore.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['user_id'])) {
     header('Location: /login');
     exit;
 }
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
+// On verifie cette condition.
 if (!isset($_ENV['SUPABASE_URL'])) {
     $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
     $dotenv->safeLoad();
@@ -24,26 +29,35 @@ $baseUrl = rtrim((string) ($_ENV['SUPABASE_URL'] ?? ''), '/') . '/rest/v1';
 
 stageArchiveLogPageAccess('/app/account/annuaire.php');
 
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $searchName = trim((string) ($_GET['q'] ?? ''));
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $filterType = trim((string) ($_GET['type'] ?? ''));
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $filterDate = trim((string) ($_GET['since'] ?? ''));
 
+// On prepare les donnees utilisees dans ce bloc.
 $allowedTypes = ['admin', 'etudiant', 'entreprise', 'tuteur', 'jury'];
 
+// On prepare les donnees utilisees dans ce bloc.
 $queryParts = ['select=id,username,email,type,created_at', 'order=username.asc'];
 
+// On verifie cette condition.
 if ($searchName !== '') {
     $queryParts[] = 'username=ilike.' . rawurlencode('%' . $searchName . '%');
 }
 
+// On verifie cette condition.
 if (in_array($filterType, $allowedTypes, true)) {
     $queryParts[] = 'type=eq.' . rawurlencode($filterType);
 }
 
+// On verifie cette condition.
 if ($filterDate !== '') {
     $queryParts[] = 'created_at=gte.' . rawurlencode($filterDate);
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $usersResult = supabaseRestRequest(
     'GET',
     "$baseUrl/users?" . implode('&', $queryParts),
@@ -53,6 +67,7 @@ $members = is_array($usersResult['data']) ? $usersResult['data'] : [];
 
 stageArchiveLogTrace('annuaire_search', "q=$searchName, type=$filterType, since=$filterDate");
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -73,6 +88,7 @@ require_once __DIR__ . '/../../includes/header.php';
                 <label class="form-label" for="type">Type de profil</label>
                 <select id="type" name="type" class="form-control">
                     <option value="">Tous les types</option>
+                    <?php // On parcourt chaque element de la liste. ?>
                     <?php foreach ($allowedTypes as $type): ?>
                         <option value="<?php echo $type; ?>" <?php echo $filterType === $type ? 'selected' : ''; ?>>
                             <?php echo ucfirst($type); ?>
@@ -92,10 +108,12 @@ require_once __DIR__ . '/../../includes/header.php';
 
 <h3 style="margin-top: 2rem;">Résultats (<?php echo count($members); ?>)</h3>
 
+<?php // On gere le cas ou la valeur attendue est vide. ?>
 <?php if (empty($members)): ?>
     <div class="card"><p>Aucun membre ne correspond à ces critères.</p></div>
 <?php else: ?>
     <div class="grid-container">
+        <?php // On parcourt chaque element de la liste. ?>
         <?php foreach ($members as $member): ?>
             <div class="card">
                 <h3 style="color: var(--primary-color);"><?php echo htmlspecialchars($member['username'] ?? ''); ?></h3>
@@ -111,4 +129,5 @@ require_once __DIR__ . '/../../includes/header.php';
     </div>
 <?php endif; ?>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

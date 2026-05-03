@@ -1,4 +1,5 @@
 <?php
+// Fichier qui affiche le formulaire de creation de compte.
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
@@ -20,10 +21,12 @@
             <h2 class="text-center mb-4" style="color: var(--text-secondary); font-weight: 500; font-size: 1rem;">Creez votre compte</h2>
 
             <?php
+                // On affiche le message d erreur si besoin.
                 if (isset($_SESSION['error'])) {
                     echo "<div class='alert alert-error'>" . $_SESSION['error'] . "</div>";
                     unset($_SESSION['error']);
                 }
+                // On affiche le message de confirmation si besoin.
                 if (isset($_SESSION['success'])) {
                     echo "<div class='alert alert-success'>" . $_SESSION['success'] . "</div>";
                     unset($_SESSION['success']);

@@ -1,38 +1,48 @@
 <?php
+// Fichier qui insere les donnees de demonstration dans Supabase.
 
 declare(strict_types=1);
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../vendor/autoload.php';
 require_once __DIR__ . '/../supabaseQuery/restClient.php';
 
+// On importe la classe qui lit le fichier .env.
 use Dotenv\Dotenv;
 
+// On charge la configuration du projet.
 $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
 $dotenv->safeLoad();
 
+// On prepare les informations de connexion a Supabase.
 $supabaseUrl = rtrim($_ENV['SUPABASE_URL'] ?? '', '/');
 $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
 $baseUrl = $supabaseUrl . '/rest/v1';
 $bucket = 'candidatures';
 
+// On verifie que les variables Supabase sont presentes.
 if ($supabaseUrl === '' || $apiKey === '') {
     fwrite(STDERR, "SUPABASE_URL ou SUPABASE_KEY manquant dans .env\n");
     exit(1);
 }
 
+// Cette fonction construit l URL REST d une table Supabase.
 function apiUrl(string $table, string $query = ''): string
 {
     global $baseUrl;
     return $baseUrl . '/' . $table . ($query !== '' ? '?' . $query : '');
 }
 
+// Cette fonction encode une valeur pour une URL.
 function encoded(mixed $value): string
 {
     return rawurlencode((string) $value);
 }
 
+// Cette fonction arrete le script quand une requete echoue.
 function failIfNeeded(array $result, string $message): void
 {
+    // On gere l erreur renvoyee par Supabase.
     if (!$result['ok']) {
         fwrite(STDERR, supabaseRestErrorMessage($result, $message) . "\n");
         fwrite(STDERR, ($result['raw'] ?? '') . "\n");
@@ -40,18 +50,22 @@ function failIfNeeded(array $result, string $message): void
     }
 }
 
+// Cette fonction recupere la premiere ligne trouvee.
 function firstRow(string $table, string $query): ?array
 {
     global $apiKey;
+    // On lit les donnees dans Supabase.
     $result = supabaseRestRequest('GET', apiUrl($table, $query . '&limit=1'), $apiKey);
     failIfNeeded($result, "Lecture impossible dans $table.");
     $rows = is_array($result['data']) ? $result['data'] : [];
     return $rows[0] ?? null;
 }
 
+// Cette fonction ajoute une ligne dans Supabase.
 function insertRow(string $table, array $payload): array
 {
     global $apiKey;
+    // On envoie une requete a Supabase.
     $result = supabaseRestRequest(
         'POST',
         apiUrl($table),
@@ -64,6 +78,7 @@ function insertRow(string $table, array $payload): array
     return $rows[0] ?? [];
 }
 
+// Cette fonction met a jour des lignes dans Supabase.
 function patchRows(string $table, string $filter, array $payload): void
 {
     global $apiKey;
@@ -71,9 +86,11 @@ function patchRows(string $table, string $filter, array $payload): void
     failIfNeeded($result, "Mise a jour impossible dans $table.");
 }
 
+// Cette fonction cree ou met a jour un utilisateur de demo.
 function ensureUser(string $email, string $username, string $type): array
 {
     $existing = firstRow('users', 'email=eq.' . encoded($email) . '&select=*');
+    // On prepare les donnees a envoyer.
     $payload = [
         'username' => $username,
         'email' => $email,
@@ -81,6 +98,7 @@ function ensureUser(string $email, string $username, string $type): array
         'type' => $type,
     ];
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('users', 'id=eq.' . (int) $existing['id'], [
             'username' => $username,
@@ -92,11 +110,13 @@ function ensureUser(string $email, string $username, string $type): array
     return insertRow('users', $payload);
 }
 
+// Cette fonction cree ou met a jour un stage de demo.
 function ensureStage(string $title, array $payload): array
 {
     $existing = firstRow('stages', 'title=eq.' . encoded($title) . '&select=*');
     $payload['title'] = $title;
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('stages', 'id=eq.' . (int) $existing['id'], $payload);
         return array_merge($existing, $payload);
@@ -105,6 +125,7 @@ function ensureStage(string $title, array $payload): array
     return insertRow('stages', $payload);
 }
 
+// Cette fonction cree ou met a jour une candidature.
 function ensureCandidature(int $studentId, int $stageId, array $payload): array
 {
     $existing = firstRow(
@@ -114,6 +135,7 @@ function ensureCandidature(int $studentId, int $stageId, array $payload): array
     $payload['student_id'] = $studentId;
     $payload['stage_id'] = $stageId;
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('candidatures', 'id=eq.' . (int) $existing['id'], $payload);
         return array_merge($existing, $payload);
@@ -122,6 +144,7 @@ function ensureCandidature(int $studentId, int $stageId, array $payload): array
     return insertRow('candidatures', $payload);
 }
 
+// Cette fonction cree ou met a jour une convention.
 function ensureConvention(int $studentId, int $stageId, array $payload): array
 {
     $existing = firstRow(
@@ -131,6 +154,7 @@ function ensureConvention(int $studentId, int $stageId, array $payload): array
     $payload['student_id'] = $studentId;
     $payload['stage_id'] = $stageId;
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('conventions', 'id=eq.' . (int) $existing['id'], $payload);
         return array_merge($existing, $payload);
@@ -139,6 +163,7 @@ function ensureConvention(int $studentId, int $stageId, array $payload): array
     return insertRow('conventions', $payload);
 }
 
+// Cette fonction cree ou met a jour une mission.
 function ensureMission(int $stageId, int $companyId, string $title, string $description): void
 {
     $existing = firstRow(
@@ -146,6 +171,7 @@ function ensureMission(int $stageId, int $companyId, string $title, string $desc
         'stage_id=eq.' . $stageId . '&title=eq.' . encoded($title) . '&select=id'
     );
 
+    // On prepare les donnees a envoyer.
     $payload = [
         'stage_id' => $stageId,
         'company_id' => $companyId,
@@ -153,14 +179,17 @@ function ensureMission(int $stageId, int $companyId, string $title, string $desc
         'description' => $description,
     ];
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('missions', 'id=eq.' . (int) $existing['id'], $payload);
         return;
     }
 
+    // On cree la ligne si elle n existe pas encore.
     insertRow('missions', $payload);
 }
 
+// Cette fonction cree ou met a jour une remarque.
 function ensureRemark(int $stageId, int $authorId, string $content): void
 {
     $existing = firstRow(
@@ -168,20 +197,24 @@ function ensureRemark(int $stageId, int $authorId, string $content): void
         'stage_id=eq.' . $stageId . '&content=eq.' . encoded($content) . '&select=id'
     );
 
+    // On prepare les donnees a envoyer.
     $payload = [
         'stage_id' => $stageId,
         'author_id' => $authorId,
         'content' => $content,
     ];
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('remarques', 'id=eq.' . (int) $existing['id'], $payload);
         return;
     }
 
+    // On cree la ligne si elle n existe pas encore.
     insertRow('remarques', $payload);
 }
 
+// Cette fonction cree ou met a jour une entree du cahier.
 function ensureCahierEntry(int $stageId, int $studentId, string $entryDate, string $content): void
 {
     $existing = firstRow(
@@ -189,6 +222,7 @@ function ensureCahierEntry(int $stageId, int $studentId, string $entryDate, stri
         'stage_id=eq.' . $stageId . '&student_id=eq.' . $studentId . '&entry_date=eq.' . $entryDate . '&select=id'
     );
 
+    // On prepare les donnees a envoyer.
     $payload = [
         'stage_id' => $stageId,
         'student_id' => $studentId,
@@ -196,14 +230,17 @@ function ensureCahierEntry(int $stageId, int $studentId, string $entryDate, stri
         'content' => $content,
     ];
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('cahier_stage', 'id=eq.' . (int) $existing['id'], $payload);
         return;
     }
 
+    // On cree la ligne si elle n existe pas encore.
     insertRow('cahier_stage', $payload);
 }
 
+// Cette fonction cree ou met a jour un document.
 function ensureDocument(int $userId, int $stageId, string $type, string $path, string $fileName): void
 {
     $existing = firstRow(
@@ -211,6 +248,7 @@ function ensureDocument(int $userId, int $stageId, string $type, string $path, s
         'user_id=eq.' . $userId . '&stage_id=eq.' . $stageId . '&type=eq.' . encoded($type) . '&file_name=eq.' . encoded($fileName) . '&select=id'
     );
 
+    // On prepare les donnees a envoyer.
     $payload = [
         'user_id' => $userId,
         'stage_id' => $stageId,
@@ -219,22 +257,27 @@ function ensureDocument(int $userId, int $stageId, string $type, string $path, s
         'file_name' => $fileName,
     ];
 
+    // On met a jour la ligne si elle existe deja.
     if ($existing) {
         patchRows('documents', 'id=eq.' . (int) $existing['id'], $payload);
         return;
     }
 
+    // On cree la ligne si elle n existe pas encore.
     insertRow('documents', $payload);
 }
 
+// Cette fonction protege le texte place dans le PDF.
 function pdfEscape(string $value): string
 {
     return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $value);
 }
 
+// Cette fonction fabrique un petit PDF de demonstration.
 function demoPdf(string $title, array $lines): string
 {
     $stream = "BT\n/F1 12 Tf\n72 760 Td\n(" . pdfEscape($title) . ") Tj\n";
+    // On ajoute chaque ligne de texte dans le PDF.
     foreach ($lines as $line) {
         $stream .= "0 -18 Td\n(" . pdfEscape($line) . ") Tj\n";
     }
@@ -250,6 +293,7 @@ function demoPdf(string $title, array $lines): string
 
     $pdf = "%PDF-1.4\n";
     $offsets = [0];
+    // On assemble les objets internes du PDF.
     foreach ($objects as $object) {
         $offsets[] = strlen($pdf);
         $pdf .= $object . "\n";
@@ -258,6 +302,7 @@ function demoPdf(string $title, array $lines): string
     $xref = strlen($pdf);
     $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
     $pdf .= "0000000000 65535 f \n";
+    // On ecrit la table des positions du PDF.
     for ($i = 1; $i <= count($objects); $i++) {
         $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
     }
@@ -267,11 +312,13 @@ function demoPdf(string $title, array $lines): string
     return $pdf;
 }
 
+// Cette fonction envoie un PDF de demo dans Supabase Storage.
 function uploadDemoPdf(string $path, string $title, array $lines): string
 {
     global $supabaseUrl, $apiKey, $bucket;
 
     $url = $supabaseUrl . '/storage/v1/object/' . $bucket . '/' . ltrim($path, '/');
+    // On prepare l upload du fichier PDF.
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
@@ -285,11 +332,13 @@ function uploadDemoPdf(string $path, string $title, array $lines): string
         ],
     ]);
 
+    // On lance l envoi vers Supabase Storage.
     $response = curl_exec($ch);
     $error = curl_error($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
+    // On arrete le script si l upload echoue.
     if ($error !== '' || $code < 200 || $code >= 300) {
         fwrite(STDERR, "Upload Storage impossible pour $path ($code $error) $response\n");
         exit(1);
@@ -298,17 +347,20 @@ function uploadDemoPdf(string $path, string $title, array $lines): string
     return $path;
 }
 
+// Cette fonction construit le chemin d un fichier de demo.
 function demoPath(string $group, string $name): string
 {
     return 'demo-prof/' . $group . '/' . $name;
 }
 
+// On cree le compte entreprise utilise par les donnees de demo.
 $company = ensureUser('entreprise.demo@portfolium.fr', 'TechNova', 'entreprise');
 $companyId = (int) $company['id'];
 
 $tutor = firstRow('users', 'type=eq.tuteur&select=id,username,email,type');
 $tutorId = $tutor ? (int) $tutor['id'] : null;
 
+// On prepare les listes de textes utilisees pour generer les exemples.
 $filieres = [
     'Informatique',
     'Data IA',
@@ -361,6 +413,7 @@ $validatedTitles = [
     'Revue OWASP validee',
 ];
 
+// On compte ce que le script ajoute ou met a jour.
 $summary = [
     'archives' => 0,
     'demandes' => 0,
@@ -368,6 +421,7 @@ $summary = [
     'documents' => 0,
 ];
 
+// On cree les stages archives de demonstration.
 for ($i = 1; $i <= 10; $i++) {
     $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
     $student = ensureUser(
@@ -404,6 +458,7 @@ for ($i = 1; $i <= 10; $i++) {
     ensureRemark($stageId, $companyId, "Dossier archive complet pour la demo professeur $num.");
     ensureCahierEntry($stageId, $studentId, '2025-05-16', 'Synthese finale: objectifs atteints, livrables remis et soutenance preparee.');
 
+    // On cree les documents lies au stage.
     foreach (['convention', 'rapport', 'fiche_evaluation'] as $docType) {
         $fileName = $docType . "_archive_$num.pdf";
         $path = uploadDemoPdf(
@@ -417,6 +472,7 @@ for ($i = 1; $i <= 10; $i++) {
     $summary['archives']++;
 }
 
+// On cree les demandes de stage en attente.
 for ($i = 1; $i <= 10; $i++) {
     $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
     $student = ensureUser(
@@ -463,6 +519,7 @@ for ($i = 1; $i <= 10; $i++) {
     $summary['demandes']++;
 }
 
+// On cree les stages termines et valides.
 for ($i = 1; $i <= 10; $i++) {
     $num = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
     $student = ensureUser(
@@ -499,6 +556,7 @@ for ($i = 1; $i <= 10; $i++) {
     ensureRemark($stageId, $companyId, "Stage termine et valide pour la demo professeur $num.");
     ensureCahierEntry($stageId, $studentId, '2026-01-12', 'Bilan final: recette effectuee, corrections integrees, convention validee.');
 
+    // On cree les documents lies au stage.
     foreach (['convention', 'rapport', 'fiche_evaluation'] as $docType) {
         $fileName = $docType . "_valide_$num.pdf";
         $path = uploadDemoPdf(
@@ -512,6 +570,7 @@ for ($i = 1; $i <= 10; $i++) {
     $summary['stages_valides']++;
 }
 
+// On affiche le resume de fin du script.
 echo "Seed professeur termine.\n";
 echo "- Archives ajoutees/actualisees: {$summary['archives']}\n";
 echo "- Demandes de stage ajoutees/actualisees: {$summary['demandes']}\n";

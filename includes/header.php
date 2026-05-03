@@ -1,5 +1,5 @@
 <?php
-// includes/header.php
+// Fichier qui prepare l en-tete commun et le menu.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -7,8 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
 $userType = $_SESSION['type'] ?? '';
 $username = $_SESSION['username'] ?? '';
 
-// Determine home link based on type
+// On choisit le lien d accueil selon le role.
 $homeLink = '#';
+// On verifie cette condition.
 if ($userType === 'etudiant') $homeLink = '/app/user/accueilUser.php';
 elseif ($userType === 'entreprise') $homeLink = '/app/entreprise/accueilEntreprise.php';
 elseif ($userType === 'tuteur') $homeLink = '/app/tuteur/accueilTuteur.php';
@@ -28,6 +29,7 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
 <body>
 
 <div class="app-container">
+    <?php // On controle cette condition avant de continuer. ?>
     <?php if ($userType): ?>
     <header class="navbar">
         <a href="<?php echo $homeLink; ?>" class="navbar-brand">Portfolium</a>
@@ -38,10 +40,11 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
             <span class="hamburger-line"></span>
         </button>
 
-        <!-- Desktop: nav stays inside header flow -->
+        <?php // On affiche le menu de bureau. ?>
         <nav class="nav-menu nav-menu--desktop" id="nav-menu-desktop">
             <ul class="navbar-nav">
                 <li><a href="<?php echo $homeLink; ?>" class="nav-link">Accueil</a></li>
+                <?php // On verifie cette condition. ?>
                 <?php if ($userType === 'etudiant'): ?>
                     <li><a href="/app/user/mesCandidatures.php" class="nav-link">Mes Candidatures</a></li>
                     <li><a href="/app/user/cahierStage.php" class="nav-link">Cahier de stage</a></li>
@@ -71,11 +74,12 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
         </nav>
     </header>
 
-    <!-- Mobile: overlay + nav OUTSIDE header to avoid stacking context issues -->
+    <?php // On affiche le menu mobile et son fond. ?>
     <div class="nav-overlay" id="nav-overlay"></div>
     <nav class="nav-menu nav-menu--mobile" id="nav-menu-mobile">
         <ul class="navbar-nav">
             <li><a href="<?php echo $homeLink; ?>" class="nav-link">Accueil</a></li>
+            <?php // On verifie cette condition. ?>
             <?php if ($userType === 'etudiant'): ?>
                 <li><a href="/app/user/mesCandidatures.php" class="nav-link">Mes Candidatures</a></li>
                 <li><a href="/app/user/cahierStage.php" class="nav-link">Cahier de stage</a></li>
@@ -148,7 +152,7 @@ elseif ($userType === 'admin') $homeLink = '/app/admin/accueilAdmin.php';
             });
         }
 
-        // Navbar shadow on scroll
+        <?php // On ajoute une ombre a la barre quand la page defile. ?>
         var navbar = document.querySelector('.navbar');
         if (navbar) {
             window.addEventListener('scroll', function() {

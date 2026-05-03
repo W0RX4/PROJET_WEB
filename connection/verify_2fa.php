@@ -1,9 +1,12 @@
 <?php
+// Fichier qui affiche la page de verification MFA.
 require_once __DIR__ . '/authSession.php';
 
+// On ouvre la session de l application.
 stageArchiveStartSession();
 
 $pending = $_SESSION['pending_supabase_auth'] ?? null;
+// On verifie cette condition.
 if (!is_array($pending)) {
     header('Location: /login');
     exit;
@@ -11,13 +14,16 @@ if (!is_array($pending)) {
 
 $emailTarget = (string) (($pending['profile']['email'] ?? '') ?: ($pending['auth_session']['user']['email'] ?? ''));
 $factorType = strtolower((string) ($pending['factor_type'] ?? 'totp'));
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $factorName = trim((string) ($pending['friendly_name'] ?? ''));
 $maskedEmail = '';
 
+// On verifie cette condition.
 if ($emailTarget !== '') {
     $parts = explode('@', $emailTarget);
     $name = $parts[0] ?? '';
 
+    // On verifie cette condition.
     if ($name !== '' && isset($parts[1])) {
         $visible = substr($name, 0, min(2, strlen($name)));
         $maskedEmail = $visible . str_repeat('*', max(1, strlen($name) - 2)) . '@' . $parts[1];
@@ -42,11 +48,13 @@ $factorLabel = $factorType === 'phone' ? 'telephone' : 'application d authentifi
             <h1 class="auth-title">Portfolium</h1>
             <h2 class="text-center mb-4" style="color: var(--text-secondary); font-weight: 500; font-size: 1rem;">Verification MFA Supabase</h2>
 
+            <?php // On affiche le message d erreur si besoin. ?>
             <?php if (isset($_SESSION['error'])): ?>
                 <div class="alert alert-error"><?php echo htmlspecialchars($_SESSION['error']); ?></div>
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
+            <?php // On affiche le message de confirmation si besoin. ?>
             <?php if (isset($_SESSION['success'])): ?>
                 <div class="alert alert-success"><?php echo htmlspecialchars($_SESSION['success']); ?></div>
                 <?php unset($_SESSION['success']); ?>
@@ -59,6 +67,7 @@ $factorLabel = $factorType === 'phone' ? 'telephone' : 'application d authentifi
                 Entrez le code genere par votre <?php echo htmlspecialchars($factorLabel); ?><?php echo $factorName !== '' ? ' (' . htmlspecialchars($factorName) . ')' : ''; ?>.
             </p>
 
+            <?php // On verifie cette condition. ?>
             <?php if ($maskedEmail !== ''): ?>
                 <p class="text-center" style="color: var(--text-secondary); margin-bottom: 1.5rem;">
                     Connexion en cours pour <strong style="color: var(--text-primary);"><?php echo htmlspecialchars($maskedEmail); ?></strong>

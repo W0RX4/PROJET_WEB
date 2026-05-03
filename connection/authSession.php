@@ -1,28 +1,40 @@
 <?php
+// Fichier qui centralise la creation de session et la redirection apres connexion.
 
 require_once __DIR__ . '/../includes/trace.php';
 
+// On verifie cette condition.
 if (!function_exists('stageArchiveStartSession')) {
+    // On ouvre la session de l application.
     function stageArchiveStartSession(): void
     {
+        // On demarre la session si elle n existe pas encore.
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
     }
 }
 
+// On verifie cette condition.
 if (!function_exists('stageArchiveDestinationForType')) {
+    // Cette fonction choisit la page d accueil selon le role.
     function stageArchiveDestinationForType(string $type): string
     {
+        // On choisit le traitement selon la valeur recue.
         switch ($type) {
+            // On gere ce cas precis.
             case 'etudiant':
                 return '/app/user/accueilUser.php';
+            // On gere ce cas precis.
             case 'entreprise':
                 return '/app/entreprise/accueilEntreprise.php';
+            // On gere ce cas precis.
             case 'tuteur':
                 return '/app/tuteur/accueilTuteur.php';
+            // On gere ce cas precis.
             case 'jury':
                 return '/app/jury/accueilJury.php';
+            // On gere ce cas precis.
             case 'admin':
                 return '/app/admin/accueilAdmin.php';
             default:
@@ -31,9 +43,12 @@ if (!function_exists('stageArchiveDestinationForType')) {
     }
 }
 
+// On verifie cette condition.
 if (!function_exists('stageArchiveSetAuthenticatedSession')) {
+    // Cette fonction enregistre les informations de connexion en session.
     function stageArchiveSetAuthenticatedSession(array $profile, array $authSession): void
     {
+        // On ouvre la session de l application.
         stageArchiveStartSession();
         session_regenerate_id(true);
 

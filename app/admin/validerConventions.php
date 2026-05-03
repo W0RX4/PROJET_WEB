@@ -1,17 +1,21 @@
 <?php
+// Fichier qui permet a l administrateur de valider les conventions.
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// On verifie que l utilisateur a le droit d acceder a cette page.
 if (!isset($_SESSION['type']) || $_SESSION['type'] !== 'admin') {
     header('Location: /login');
     exit;
 }
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once __DIR__ . '/../../supabaseQuery/restClient.php';
 require_once __DIR__ . '/../../supabaseQuery/getSupabaseSignedUrl.php';
 
+// On importe les classes utilisees dans ce fichier.
 use Dotenv\Dotenv;
 
 $dotenv = Dotenv::createImmutable(__DIR__ . '/../..');
@@ -21,28 +25,34 @@ $apiKey = $_ENV['SUPABASE_KEY'] ?? '';
 $supabaseUrl = $_ENV['SUPABASE_URL'] ?? '';
 $baseUrl = rtrim($supabaseUrl, '/') . '/rest/v1';
 
+// Cette fonction renvoie vers la validation des conventions.
 function redirectAdminConventions(): void
 {
     header('Location: validerConventions.php');
     exit;
 }
 
+// On traite les donnees envoyees par le formulaire.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $action = (string) $_POST['action'];
     $conventionId = (int) ($_POST['convention_id'] ?? 0);
 
+    // On verifie cette condition.
     if ($conventionId <= 0) {
         $_SESSION['error'] = 'Convention invalide.';
         redirectAdminConventions();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'validate_admin') {
+        // On appelle Supabase pour lire ou modifier les donnees.
         $update = supabaseRestRequest(
             'PATCH',
             "$baseUrl/conventions?id=eq.$conventionId",
             $apiKey,
             ['admin_validated' => true]
         );
+        // On controle cette condition avant de continuer.
         if (!$update['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($update, 'Validation impossible.');
             redirectAdminConventions();
@@ -51,13 +61,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         redirectAdminConventions();
     }
 
+    // On execute l action demandee par le formulaire.
     if ($action === 'unvalidate_admin') {
+        // On appelle Supabase pour lire ou modifier les donnees.
         $update = supabaseRestRequest(
             'PATCH',
             "$baseUrl/conventions?id=eq.$conventionId",
             $apiKey,
             ['admin_validated' => false]
         );
+        // On controle cette condition avant de continuer.
         if (!$update['ok']) {
             $_SESSION['error'] = supabaseRestErrorMessage($update, 'Mise à jour impossible.');
             redirectAdminConventions();
@@ -67,30 +80,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     }
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $conventionsResult = supabaseRestRequest('GET', "$baseUrl/conventions?select=*&order=created_at.desc", $apiKey);
 $conventions = is_array($conventionsResult['data']) ? $conventionsResult['data'] : [];
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $stagesResult = supabaseRestRequest('GET', "$baseUrl/stages?select=id,title,company,filiere,start_date,end_date", $apiKey);
+// On prepare les donnees utilisees dans ce bloc.
 $stagesMap = [];
+// On parcourt chaque element de la liste.
 foreach ((is_array($stagesResult['data']) ? $stagesResult['data'] : []) as $stage) {
     $stagesMap[(int) ($stage['id'] ?? 0)] = $stage;
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $usersResult = supabaseRestRequest('GET', "$baseUrl/users?select=id,username,email,type", $apiKey);
+// On prepare les donnees utilisees dans ce bloc.
 $usersMap = [];
+// On parcourt chaque element de la liste.
 foreach ((is_array($usersResult['data']) ? $usersResult['data'] : []) as $user) {
     $usersMap[(int) ($user['id'] ?? 0)] = $user;
 }
 
+// On appelle Supabase pour lire ou modifier les donnees.
 $documentsResult = supabaseRestRequest('GET', "$baseUrl/documents?type=eq.convention&select=*&order=uploaded_at.desc", $apiKey);
+// On prepare les donnees utilisees dans ce bloc.
 $documentsByKey = [];
+// On parcourt chaque element de la liste.
 foreach ((is_array($documentsResult['data']) ? $documentsResult['data'] : []) as $doc) {
     $key = (int) ($doc['stage_id'] ?? 0) . '_' . (int) ($doc['user_id'] ?? 0);
     $documentsByKey[$key] = $doc;
 }
 
+// On recupere et nettoie une valeur envoyee par l utilisateur.
 $filterStatus = trim((string) ($_GET['status'] ?? 'pending'));
 
+// On charge les fichiers necessaires.
 require_once __DIR__ . '/../../includes/header.php';
 ?>
 
@@ -99,11 +124,13 @@ require_once __DIR__ . '/../../includes/header.php';
     <p>Vérifiez les conventions signées par l'entreprise et le tuteur, puis apportez la validation finale.</p>
 </div>
 
+<?php // On affiche le message de confirmation si besoin. ?>
 <?php if (isset($_SESSION['result'])): ?>
     <div class="alert alert-success"><?php echo htmlspecialchars($_SESSION['result']); ?></div>
     <?php unset($_SESSION['result']); ?>
 <?php endif; ?>
 
+<?php // On affiche le message d erreur si besoin. ?>
 <?php if (isset($_SESSION['error'])): ?>
     <div class="alert alert-error"><?php echo htmlspecialchars($_SESSION['error']); ?></div>
     <?php unset($_SESSION['error']); ?>
@@ -124,12 +151,16 @@ require_once __DIR__ . '/../../includes/header.php';
 </div>
 
 <?php
+// On prepare les donnees utilisees dans ce bloc.
 $filtered = [];
+// On parcourt chaque element de la liste.
 foreach ($conventions as $convention) {
     $adminValidated = !empty($convention['admin_validated']);
+    // On verifie cette condition.
     if ($filterStatus === 'pending' && $adminValidated) {
         continue;
     }
+    // On verifie cette condition.
     if ($filterStatus === 'validated' && !$adminValidated) {
         continue;
     }
@@ -137,10 +168,12 @@ foreach ($conventions as $convention) {
 }
 ?>
 
+<?php // On gere le cas ou la valeur attendue est vide. ?>
 <?php if (empty($filtered)): ?>
     <div class="card"><p>Aucune convention ne correspond à ce filtre.</p></div>
 <?php else: ?>
     <div class="grid-container">
+        <?php // On parcourt chaque element de la liste. ?>
         <?php foreach ($filtered as $convention): ?>
             <?php
                 $stageId = (int) ($convention['stage_id'] ?? 0);
@@ -166,6 +199,7 @@ foreach ($conventions as $convention) {
                 </div>
 
                 <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 1rem;">
+                    <?php // On controle cette condition avant de continuer. ?>
                     <?php if ($documentUrl): ?>
                         <a href="<?php echo htmlspecialchars($documentUrl); ?>" target="_blank" class="btn btn-secondary" style="padding: 0.5rem 1rem;">Voir la convention</a>
                     <?php else: ?>
@@ -174,6 +208,7 @@ foreach ($conventions as $convention) {
                 </div>
 
                 <div style="margin-top: 1.25rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center;">
+                    <?php // On controle cette condition avant de continuer. ?>
                     <?php if (!$adminValidated): ?>
                         <?php $canValidate = $doc !== null && $companyValidated; ?>
                         <form method="POST">
@@ -181,6 +216,7 @@ foreach ($conventions as $convention) {
                             <input type="hidden" name="convention_id" value="<?php echo (int) ($convention['id'] ?? 0); ?>">
                             <button type="submit" class="btn btn-primary" <?php echo $canValidate ? '' : 'disabled style="opacity:0.6;cursor:not-allowed;"'; ?>>Valider en tant qu'admin</button>
                         </form>
+                        <?php // On controle cette condition avant de continuer. ?>
                         <?php if (!$doc): ?>
                             <span style="color: var(--text-secondary); font-size: 0.85rem;">L'étudiant doit d'abord déposer la convention.</span>
                         <?php elseif (!$companyValidated): ?>
@@ -203,4 +239,5 @@ foreach ($conventions as $convention) {
     <a class="btn btn-secondary mt-4" href="accueilAdmin.php">Retour à l'accueil</a>
 </div>
 
+<?php // On charge les fichiers necessaires. ?>
 <?php require_once __DIR__ . '/../../includes/footer.php'; ?>

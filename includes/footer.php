@@ -1,9 +1,11 @@
-    </main> <!-- End main-content -->
+    <?php // On ferme le contenu principal. ?>
+    </main>
 
     <footer class="site-footer">
         <p>&copy; 2026 CY Tech - Portfolium</p>
     </footer>
-</div> <!-- End app-container -->
+<?php // On ferme le conteneur de l application. ?>
+</div>
 
 </body>
 </html>
